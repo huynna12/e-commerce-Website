@@ -60,7 +60,7 @@ class Item(models.Model):
     
     # --- CATEGORY FIELDS ---
     item_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other', db_index=True)
-    custom_category = models.CharField(max_length=100, blank=True, null=True, help_text="Custom category when 'Other' selected")
+    custom_category = models.CharField(max_length=100, blank=True, help_text="Custom category when 'Other' selected")
     
     # --- PRODUCT DETAILS ---
     item_sku = models.CharField(max_length=50, unique=True, blank=True)
@@ -142,10 +142,6 @@ class Item(models.Model):
         if self.sale_start_date and self.sale_end_date:
             if self.sale_start_date >= self.sale_end_date:
                 raise ValidationError("Sale start date must be before end date")
-        
-        # Weight validation for non-digital products
-        if not self.is_digital and not self.item_weight:
-            raise ValidationError("Weight is required for physical products")
     
     def __str__(self):
         return f"{self.item_name} - ({self.item_sku})"

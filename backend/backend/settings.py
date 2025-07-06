@@ -58,9 +58,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'items.apps.ItemsConfig',  # Ensure this matches your app name
-    'users.apps.UsersConfig',  # Ensure this matches your app name
-    'orders.apps.OrdersConfig',  # Ensure this matches your app name
+    # 'items.apps.ItemsConfig', 
+    # 'users.apps.UsersConfig',  
+    # 'orders.apps.OrdersConfig',  
+    'items',
+    'users',
+    'orders',
 ]
 
 MIDDLEWARE = [
