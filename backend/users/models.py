@@ -1,9 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import RegexValidator
-
+from django.db.models import Avg, Count
+from orders.models import OrderItem
+   
 class Profile(models.Model):
-    # Core relationship
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
     # Profile information
@@ -11,8 +11,7 @@ class Profile(models.Model):
     bio = models.TextField(max_length=500, blank=True, help_text="Tell us about yourself")
     
     # Contact information
-    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    phone_number = models.CharField(max_length=17, blank=True)
     
     # Address information
     address = models.CharField(max_length=255, blank=True)
@@ -33,34 +32,21 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        indexes = [
-            models.Index(fields=['is_seller', 'seller_rating']),
-        ]
-
     def __str__(self):
         return f"{self.user.username}'s profile"
     
-    @property
-    def full_address(self):
-        """Get formatted full address"""
-        parts = [self.address, self.city, self.postal_code, self.country]
-        return ", ".join(part for part in parts if part)
-    
-    @property
-    def is_verified_seller(self):
-        """Check if seller is verified (has made sales)"""
-        return self.is_seller and self.total_sales > 0
-    
+    # Update seller stats based on actual orders
+    # This method aggregates sales and ratings from OrderItem model
     def update_seller_stats(self):
-        """Update seller rating and total sales"""
-        if self.is_seller:
-            from django.db.models import Avg, Count
-            orders = self.user.items.aggregate(
-                total_sales=Count('orderitem__order', distinct=True),
-                avg_rating=Avg('reviews__rating')
+        if self.is_seller:         
+            stats = OrderItem.objects.filter(
+                item__seller=self.user,
+                order__status='delivered'  # Only count delivered orders
+            ).aggregate(
+                total_sales=Count('order', distinct=True),
+                avg_rating=Avg('item__reviews__rating')
             )
             
-            self.total_sales = orders['total_sales'] or 0
-            self.seller_rating = round(orders['avg_rating'] or 0.0, 2)
+            self.total_sales = stats['total_sales'] or 0
+            self.seller_rating = round(stats['avg_rating'] or 0.0, 2)
             self.save(update_fields=['total_sales', 'seller_rating'])
