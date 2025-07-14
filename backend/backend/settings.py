@@ -39,6 +39,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+
+    # Exception handler using django_to_drf_exception_handler in backend.exceptions
+    "EXCEPTION_HANDLER": "backend.exceptions.django_to_drf_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -58,9 +61,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    # 'items.apps.ItemsConfig', 
-    # 'users.apps.UsersConfig',  
-    # 'orders.apps.OrdersConfig',  
     'items',
     'users',
     'orders',
@@ -155,6 +155,39 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# ...existing code...
+
 APPEND_SLASH = False
-# ...existing code...
+
+# Logging configuration to monitor exception handling
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'django_exceptions.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'backend.exceptions': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
