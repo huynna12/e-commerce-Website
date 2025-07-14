@@ -1,54 +1,43 @@
 from rest_framework import serializers
-from .models.item import Item
-from .models.review import Review
+from .models import Item, Review
 from django.contrib.auth.models import User
+'''
+CONTENTS: 
+├── Review Serializer
+├── Review Create Serializer
+├── Item List Serializer
+├── Item Detail Serializer
+├── Item Create Serializer
+'''
 
-# ==================== REVIEW SERIALIZERS ====================
-
+# Serializers for Review model but not having item, since this is called 
+# inside ItemDetailSerializer for ItemPage
 class ReviewSerializer(serializers.ModelSerializer):
-    """For displaying reviews"""
     reviewer_name = serializers.CharField(source='reviewer.username', read_only=True)
     
     class Meta:
         model = Review
         fields = [
-            'id', 'reviewer_name', 'rating', 'comment', 
-            'is_verified_purchase', 'helpful_count', 'created_at',
+            'id', 'reviewer', 'order', 'rating', 'content',
+            'created_at','is_verified_purchase', 'helpful_count',
             'seller_response', 'response_date'
         ]
 
-class ReviewCreateSerializer(serializers.ModelSerializer):
-    """For creating new reviews"""
+# Creating and updating reviews (same fields for both operations)
+class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
+    order_id = serializers.IntegerField(required=False, allow_null=True)
+    
     class Meta:
         model = Review
-        fields = ['item', 'rating', 'comment']
-    
-    def validate(self, data):
-        """Check if user can review this item"""
-        user = self.context['request'].user
-        item = data['item']
-        
-        can_review, message = Review.can_user_review(user, item)
-        if not can_review:
-            raise serializers.ValidationError(message)
-        
-        return data
-    
-    def create(self, validated_data):
-        """Auto-assign reviewer"""
-        validated_data['reviewer'] = self.context['request'].user
-        return super().create(validated_data)
-
-# ==================== ITEM SERIALIZERS ====================
+        fields = ['rating', 'content', 'order_id']
 
 class ItemListSerializer(serializers.ModelSerializer):
-    """Lightweight for homepage/search results"""
     seller_name = serializers.CharField(source='seller.username', read_only=True)
-    current_price = serializers.ReadOnlyField()  # Uses your @property
-    display_category = serializers.ReadOnlyField()  # Uses your @property
-    average_rating = serializers.ReadOnlyField()  # Uses your @property
-    review_count = serializers.ReadOnlyField()  # Uses your @property
-    is_in_stock = serializers.ReadOnlyField()  # Uses your @property
+    current_price = serializers.ReadOnlyField()  
+    display_category = serializers.ReadOnlyField()  
+    average_rating = serializers.ReadOnlyField()  
+    review_count = serializers.ReadOnlyField()  
+    is_in_stock = serializers.ReadOnlyField()  
     
     class Meta:
         model = Item
@@ -109,11 +98,9 @@ class ItemDetailSerializer(serializers.ModelSerializer):
         ]
     
     def get_review_stats(self, obj):
-        """Get comprehensive review statistics"""
         return Review.get_item_stats(obj)
 
-class ItemCreateSerializer(serializers.ModelSerializer):
-    """For creating/updating items"""
+class ItemCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = [
@@ -123,25 +110,3 @@ class ItemCreateSerializer(serializers.ModelSerializer):
             'technical_specs', 'is_featured', 'is_available', 'is_on_sale', 
             'is_digital', 'sale_price', 'sale_start_date', 'sale_end_date'
         ]
-    
-    def validate(self, data):
-        """Custom validation"""
-        # Require custom category when 'other' is selected
-        if data.get('item_category') == 'other' and not data.get('custom_category'):
-            raise serializers.ValidationError(
-                "Custom category is required when 'Other' is selected"
-            )
-        
-        # Sale price validation
-        if data.get('is_on_sale') and data.get('sale_price'):
-            if data['sale_price'] >= data.get('item_price', 0):
-                raise serializers.ValidationError(
-                    "Sale price must be lower than regular price"
-                )
-        
-        return data
-    
-    def create(self, validated_data):
-        """Auto-assign seller"""
-        validated_data['seller'] = self.context['request'].user
-        return super().create(validated_data)
