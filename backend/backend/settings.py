@@ -40,8 +40,8 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
 
-    # Exception handler using django_to_drf_exception_handler in backend.exceptions
-    "EXCEPTION_HANDLER": "backend.exceptions.django_to_drf_exception_handler",
+    # Exception handler using custom_exception_handler in backend.exceptions
+    "EXCEPTION_HANDLER": "backend.exceptions.custom_exception_handler",
 }
 
 SIMPLE_JWT = {

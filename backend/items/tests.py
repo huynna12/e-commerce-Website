@@ -1,9 +1,11 @@
+from datetime import timedelta
+from django.utils import timezone
 from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from orders.models import Order, OrderItem
-from items.models import Item, Review
+from items.models import Item, Review, Promotion
 
 # ITEM MODEL TESTS
 class ItemModelTest(TestCase):
@@ -195,4 +197,41 @@ class ReviewModelTest(TestCase):
         limited_reviews = Review.get_reviews_with_media(self.item, limit=5)
         self.assertEqual(limited_reviews.count(), 1)
 
+# PROMOTION MODEL TEST
+class PromotionModelTest(TestCase):
+    def setUp(self):
+        self.seller = User.objects.create_user(username='seller', password='testpass')
+        self.item = Item.objects.create(
+            item_name='Test Item',
+            item_price=100,
+            seller=self.seller,
+            item_category='electronics'  # Use a valid category from CATEGORY_CHOICES
+        )
+        now = timezone.now()
+        self.promo = Promotion.objects.create(
+            promo_type='item',
+            code='PROMO10',
+            discount_method='percent',
+            discount_amount=10,
+            start_at=now - timedelta(days=1),
+            end_at=now + timedelta(days=1),
+        )
+        self.promo.items.add(self.item)
+        self.promo.sellers.add(self.seller)
 
+    def test_is_valid(self):
+        self.assertTrue(self.promo.is_valid())
+
+    def test_is_applicable_to_item(self):
+        class DummyOrderItem:
+            item = self.item
+        order_item = DummyOrderItem()
+        self.assertTrue(self.promo.is_applicable_to_item(order_item))
+
+    def test_calculate_discounted_amount_percent(self):
+        self.assertEqual(self.promo.calculate_discounted_amount(100), 90.0)
+
+    def test_calculate_discounted_amount_fixed(self):
+        self.promo.discount_method = 'fixed'
+        self.promo.discount_amount = 15
+        self.assertEqual(self.promo.calculate_discounted_amount(100), 85.0)

@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Avg
+from django.db.models import Q
 from django.db import transaction
 import uuid
 
@@ -17,6 +17,10 @@ CONTENTS:
 ├── Search & Filtering      
 └── Tracking & Recommendations    
 '''
+class ItemImage(models.Model):
+    item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='item_images/', default='item_images/default.png')
+
 class Item(models.Model):
     ''' FIELDS AND CHOICES '''
     CATEGORY_CHOICES = [
@@ -63,10 +67,6 @@ class Item(models.Model):
     item_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
     item_quantity = models.PositiveIntegerField(default=0)
 
-    # Image fields
-    item_image = models.ImageField(upload_to='item_images/', default='item_images/default.png')
-    item_images = models.JSONField(default=list, blank=True, help_text="Additional image URLs")
-
     # Category fields
     item_category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other', db_index=True)
     custom_category = models.CharField(max_length=100, blank=True, help_text="Custom category when 'Other' selected")
@@ -100,13 +100,13 @@ class Item(models.Model):
     sale_end_date = models.DateTimeField(null=True, blank=True)
 
     # Analytics fields
-    view_count = models.PositiveIntegerField(default=0)
-    times_purchased = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0, editable=False)
+    times_purchased = models.PositiveIntegerField(default=0, editable=False)
 
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
     ''' META AND INDEXES '''
     class Meta:
         ordering = ['-created_at']
@@ -287,21 +287,26 @@ class Item(models.Model):
         
         return items.order_by('-is_featured', '-view_count', '-created_at')
 
-    # Return all available categories including custom ones
+    # Return a sorted post of all unique display category names for available items
+    # with custom categories included if not empty
     @classmethod
     def get_all_categories(cls):
-        # Standard categories from choices
-        standard = [choice[0] for choice in cls.CATEGORY_CHOICES if choice[0] != 'other']
+        # Get all unique internal category keys for available items
+        display_categories = cls.objects.filter(is_available=True).values_list('item_category', flat=True).distinct()
 
-        # Custom categories from 'other' items
+        # Map internal keys to display names
+        display_map = dict(cls.CATEGORY_CHOICES)
+        display_names = {display_map.get(cat, cat) for cat in display_categories}
+
+        # Add non-empty custom categories for 'other' items
         custom = cls.objects.filter(
             item_category='other',
             custom_category__isnull=False,
+            custom_category__gt='',
             is_available=True
         ).values_list('custom_category', flat=True).distinct()
-        
-        # Combine standard and custom categories, ensuring uniqueness and sorting
-        return sorted(set(standard + list(custom)))
+        display_names.update(custom)
+        return sorted(display_names)
     
     # Return all the trending items based on views and purchases
     @classmethod

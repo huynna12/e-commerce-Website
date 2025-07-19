@@ -151,8 +151,8 @@ class Review(models.Model):
         media_count = reviews.filter(media__isnull=False).count()
         
         return {
-            'total_reviews': stats['total_reviews'],  'average_rating': round(stats['average_rating'], 1) if stats['average_rating'] else 0,
-          
+            'total_reviews': stats['total_reviews'],  
+            'average_rating': round(stats['average_rating'], 1) if stats['average_rating'] else 0,
             'rating_distribution': rating_dist,
             'percentage_recommend': round(recommend_percentage, 1),
             'reviews_with_media': media_count,

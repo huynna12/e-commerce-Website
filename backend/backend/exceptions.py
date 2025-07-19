@@ -6,7 +6,7 @@ from django.db import IntegrityError
 """
     Convert DjangoValidationError and IntegrityError to DRFValidationError (400 BAD REQUEST) 
 """
-def django_to_drf_exception_handler(exc, context):     
+def custom_exception_handler(exc, context):     
     # 1. Django ValidationError (from model clean() methods) -> 400 Bad Request
     if isinstance(exc, DjangoValidationError):
         if hasattr(exc, 'message_dict'):

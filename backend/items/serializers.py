@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import Item, Review
-from django.contrib.auth.models import User
+from .models import Item, Review, Promotion
+from .models.item import ItemImage
+
 '''
 CONTENTS: 
 ├── Review Serializer
@@ -13,7 +14,7 @@ CONTENTS:
 # Serializers for Review model but not having item, since this is called 
 # inside ItemDetailSerializer for ItemPage
 class ReviewSerializer(serializers.ModelSerializer):
-    reviewer_name = serializers.CharField(source='reviewer.username', read_only=True)
+    reviewer = serializers.CharField(source='reviewer.username', read_only=True)
     
     class Meta:
         model = Review
@@ -31,24 +32,23 @@ class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
         model = Review
         fields = ['rating', 'content', 'order_id']
 
+# Homepage and search results serializer
 class ItemListSerializer(serializers.ModelSerializer):
-    seller_name = serializers.CharField(source='seller.username', read_only=True)
     current_price = serializers.ReadOnlyField()  
     display_category = serializers.ReadOnlyField()  
     average_rating = serializers.ReadOnlyField()  
-    review_count = serializers.ReadOnlyField()  
     is_in_stock = serializers.ReadOnlyField()  
-    
+
     class Meta:
         model = Item
         fields = [
-            'id', 'item_name', 'item_summary', 'current_price', 'item_image',
-            'display_category', 'item_condition', 'is_featured', 'is_on_sale',
-            'seller_name', 'average_rating', 'review_count', 'is_in_stock'
+            'id', 'item_name', 'current_price',
+            'display_category', 'is_featured', 'is_on_sale',
+            'average_rating', 'is_in_stock'
         ]
 
+# Full data for item page
 class ItemDetailSerializer(serializers.ModelSerializer):
-    """Full data for item detail pages"""
     reviews = ReviewSerializer(many=True, read_only=True)
     seller_name = serializers.CharField(source='seller.username', read_only=True)
     
@@ -70,9 +70,6 @@ class ItemDetailSerializer(serializers.ModelSerializer):
             # Basic info
             'id', 'item_name', 'item_summary', 'item_desc', 'item_price', 
             'current_price', 'item_quantity',
-            
-            # Images
-            'item_image', 'item_images',
             
             # Category & details
             'item_category', 'display_category', 'custom_category',
@@ -96,17 +93,40 @@ class ItemDetailSerializer(serializers.ModelSerializer):
             # Related data
             'reviews', 'review_stats'
         ]
-    
+
     def get_review_stats(self, obj):
         return Review.get_item_stats(obj)
+    
+class ItemImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemImage
+        fields = ['id', 'image']
 
 class ItemCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = [
-            'item_name', 'item_summary', 'item_desc', 'item_price', 'item_quantity',
-            'item_image', 'item_images', 'item_category', 'custom_category',
-            'item_origin', 'item_condition', 'item_weight', 'item_dimensions',
-            'technical_specs', 'is_featured', 'is_available', 'is_on_sale', 
-            'is_digital', 'sale_price', 'sale_start_date', 'sale_end_date'
+            'item_name', 'item_summary', 'item_desc', 'item_price', 'item_quantity', 'item_category', 
+            'custom_category', 'item_origin', 'item_condition', 'item_weight', 'item_dimensions',
+            'technical_specs', 'is_featured', 'is_available', 'is_on_sale', 'is_digital', 'sale_price',
+            'sale_start_date', 'sale_end_date'
         ]
+
+    def create(self, validated_data):
+        images_data = validated_data.pop('images', [])
+        item = Item.objects.create(**validated_data)
+        for image_data in images_data:
+            ItemImage.objects.create(item=item, **image_data)
+        return item
+
+    def update(self, instance, validated_data):
+        images_data = validated_data.pop('images', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if images_data is not None:
+            # Optionally clear existing images or update as needed
+            instance.images.all().delete()
+            for image_data in images_data:
+                ItemImage.objects.create(item=instance, **image_data)
+        return instance
