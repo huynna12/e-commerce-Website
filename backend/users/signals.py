@@ -8,7 +8,3 @@ from .models import Profile # The profile model
 def build_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)  # Listen for the post_save signal from the User model
-def save_profile(sender, instance, **kwargs):
-    instance.profile.save()

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { gsap } from 'gsap';
 import api from '../api';
-import Navbar from './NavBar';
+import Navbar from '../components/NavBar';
 
 const ItemDetail = () => {
   const { itemId } = useParams();

@@ -1,18 +1,11 @@
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Home from './pages/Home';
-import ItemDetail from './components/ItemDetail';
 import Profile from './pages/Profile';
-// import Navbar from './components/NavBar';
-import ProtectedRoute from './components/ProtectedRoute';
+import ItemDetail from './pages/ItemDetail';
 import './index.css';
-
-function Logout() {
-  localStorage.clear();
-  return <Navigate to="/login" />;
-}
 
 function RegisterAndClear() {
   // Clear the old session data
@@ -28,7 +21,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route
-          path="/"
+          path="/heidi/"
           element={
             // <ProtectedRoute>
               <Home />
@@ -42,9 +35,8 @@ function App() {
           }
         />
         <Route path="/login" element={<Login  />}/>
-        <Route path="/logout" element={<Logout  />}/>
         <Route path="/register" element={<RegisterAndClear  />}/>
-
+        <Route path="/profile/:username" element={<Profile />} />
         {/* If go to any other paths, show NotFound page */}
         <Route path="*" element={<NotFound />}/>
       </Routes>

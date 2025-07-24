@@ -25,7 +25,6 @@ class Profile(models.Model):
     total_sales = models.PositiveIntegerField(default=0)
     
     # Preferences
-    email_notifications = models.BooleanField(default=True)
     marketing_emails = models.BooleanField(default=False)
     
     # Timestamps
