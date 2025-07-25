@@ -83,7 +83,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     # Fields
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    item = models.ForeignKey('items.Item', on_delete=models.CASCADE, related_name='order_items')
+    item = models.ForeignKey('items.Item', on_delete=models.CASCADE, related_name='order_item')
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     
     price = models.DecimalField(

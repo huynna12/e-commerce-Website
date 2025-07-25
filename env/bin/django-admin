@@ -1,4 +1,4 @@
-#!/Users/huynna/Desktop/Projects/h-commerce/env/bin/python3
+#!/Users/huynna/Documents/Projects/h-commerce/env/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

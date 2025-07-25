@@ -86,8 +86,7 @@ class Review(models.Model):
         if self.order.user != self.reviewer:
             raise ValidationError("Order does not belong to you")
         
-        # Verify the item was purchased in this order
-        if not self.order.items.filter(id=self.item.id).exists():
+        if not self.order.items.filter(item_id=self.item.id).exists():
             raise ValidationError("This item was not purchased in the specified order")
         
         # Order must be delivered/completed to review
