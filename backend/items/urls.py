@@ -12,6 +12,7 @@ urlpatterns = [
     # Item endpoints (CRUD, listing, detail, custom actions)
     path('', include(router.urls)),
     # Review endpoints (create/update/delete via ReviewView)
+    # Later change to slug:item_slug
     path('<int:item_id>/reviews/', ReviewView.as_view(), name='item-reviews'),  # POST for create
     path('reviews/<int:review_id>/', ReviewView.as_view(), name='review-detail'),      # PUT/PATCH/DELETE for update/delete
 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
@@ -18,7 +19,7 @@ CONTENTS:
 └── Tracking & Recommendations    
 '''
 class ItemImage(models.Model):
-    item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='images')
+    item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='item_images')
     image = models.ImageField(upload_to='item_images/', default='item_images/default.png')
 
 class Item(models.Model):
@@ -48,6 +49,7 @@ class Item(models.Model):
     
     # Basic fields
     item_name = models.CharField(max_length=100, db_index=True)
+    # item_slug = models.SlugField(blank=True, unique=True)
     item_summary = models.CharField(
     max_length=200, 
     default="Product summary",
@@ -64,7 +66,7 @@ class Item(models.Model):
         help_text="Technical specifications as key-value pairs"
     )
     
-    item_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+    item_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal(0.01))])
     item_quantity = models.PositiveIntegerField(default=0)
 
     # Category fields

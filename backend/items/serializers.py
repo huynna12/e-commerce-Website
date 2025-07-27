@@ -46,12 +46,18 @@ class ItemListSerializer(serializers.ModelSerializer):
             'display_category', 'is_featured', 'is_on_sale',
             'average_rating', 'is_in_stock'
         ]
+    
+class ItemImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemImage
+        fields = ['id', 'image']
 
 # Full data for item page
 class ItemDetailSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
     seller_name = serializers.CharField(source='seller.username', read_only=True)
-    
+    item_images = ItemImageSerializer(many=True, read_only=True)
+
     # Use your model properties
     current_price = serializers.ReadOnlyField()
     display_category = serializers.ReadOnlyField()
@@ -69,7 +75,7 @@ class ItemDetailSerializer(serializers.ModelSerializer):
         fields = [
             # Basic info
             'id', 'item_name', 'item_summary', 'item_desc', 'item_price', 
-            'current_price', 'item_quantity',
+            'current_price', 'item_quantity', 'item_images',
             
             # Category & details
             'item_category', 'display_category', 'custom_category',
@@ -96,11 +102,6 @@ class ItemDetailSerializer(serializers.ModelSerializer):
 
     def get_review_stats(self, obj):
         return Review.get_item_stats(obj)
-    
-class ItemImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ItemImage
-        fields = ['id', 'image']
 
 class ItemCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:

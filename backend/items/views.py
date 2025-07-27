@@ -1,4 +1,3 @@
-# views.py
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,12 +6,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 
 from .models.item import ItemImage
-
 from .models import Item, Review
 from orders.models import Order  
 from .serializers import (
     ItemListSerializer, ItemDetailSerializer, ItemCreateUpdateSerializer,
-    ReviewSerializer, ReviewCreateUpdateSerializer
+    ReviewSerializer, ReviewCreateUpdateSerializer, ItemImageSerializer
 )
 
 '''
@@ -44,6 +42,7 @@ class HomepageView(APIView):
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     permission_classes = [AllowAny]
+    # lookup_field = 'slug'
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -63,6 +62,21 @@ class ItemViewSet(viewsets.ModelViewSet):
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
     
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        item = serializer.save()
+        images = request.FILES.getlist('images')
+        if images:
+            # Optionally clear old images
+            item.item_images.all().delete()
+            for image in images:
+                ItemImage.objects.create(item=item, image=image)
+        read_serializer = self.get_serializer(item)
+        return Response(read_serializer.data)
+
     def get_queryset(self):
         # Special case: user's own items
         if (self.request.query_params.get('seller') == 'me' and 
@@ -135,6 +149,7 @@ class ReviewView(APIView):
 
     def post(self, request, item_id):
         """POST /items/{item_id}/reviews/ - Create new review for an item"""
+        #  Later be item = get_object_or_404(Item, slug=item_slug)
         item = get_object_or_404(Item, id=item_id)
         serializer = ReviewCreateUpdateSerializer(data=request.data)
         if serializer.is_valid():
