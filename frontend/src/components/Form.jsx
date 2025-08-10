@@ -3,7 +3,7 @@ import api from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../constants';
 import LoadingIndicator from './LoadingIndicator';
-import Navbar from './NavBar';
+import Navbar from './Navbar';
 import PropTypes from 'prop-types';
 
 const Form = ({ route, method }) => {

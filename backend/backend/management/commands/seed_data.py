@@ -71,16 +71,9 @@ class Command(BaseCommand):
                 item_condition=condition,
                 seller=seller,
             )
+            ItemImage.objects.create(item=item)
             items.append(item)
-            self._add_images_to_item(fake, item)
         return items
-
-    def _add_images_to_item(self, fake, item):
-        for _ in range(random.randint(1, 3)):
-            ItemImage.objects.create(
-                item=item,
-                image=fake.image_url()  # Not a real file, but works for seeding
-            )
 
     def _create_orders(self, fake, buyers, items):
         orders = []

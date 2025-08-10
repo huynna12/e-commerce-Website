@@ -15,14 +15,23 @@ CONTENTS:
 # inside ItemDetailSerializer for ItemPage
 class ReviewSerializer(serializers.ModelSerializer):
     reviewer = serializers.CharField(source='reviewer.username', read_only=True)
-    
+    is_upvoted = serializers.SerializerMethodField()
+
     class Meta:
         model = Review
         fields = [
             'id', 'reviewer', 'order', 'rating', 'content',
             'created_at','is_verified_purchase', 'helpful_count',
-            'seller_response', 'response_date'
+            'seller_response', 'response_date', 'media', 'is_upvoted', 
         ]
+
+    def get_is_upvoted(self, obj):
+        request = self.context.get('request', None)
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated:
+            return obj.upvoted_by.filter(id=user.id).exists()
+        return False
+
 
 # Creating and updating reviews (same fields for both operations)
 class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
@@ -30,28 +39,38 @@ class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Review
-        fields = ['rating', 'content', 'order_id']
+        fields = ['rating', 'content', 'order_id', 'media']
+
+class ItemImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemImage
+        fields = ['id', 'image_file', 'image_url']
 
 # Homepage and search results serializer
 class ItemListSerializer(serializers.ModelSerializer):
     current_price = serializers.ReadOnlyField()  
     display_category = serializers.ReadOnlyField()  
-    average_rating = serializers.ReadOnlyField()  
     is_in_stock = serializers.ReadOnlyField()  
+    item_image = serializers.SerializerMethodField()
+    review_stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Item
         fields = [
-            'id', 'item_name', 'current_price',
+            'id', 'item_name', 'current_price', 'item_image',
             'display_category', 'is_featured', 'is_on_sale',
-            'average_rating', 'is_in_stock'
+            'is_in_stock', 'review_stats'
         ]
-    
-class ItemImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ItemImage
-        fields = ['id', 'image']
 
+    def get_review_stats(self, obj):
+        return Review.get_item_stats(obj)
+    
+    def get_item_image(self, obj):
+        first_image = obj.item_images.first()
+        if first_image:
+            return ItemImageSerializer(first_image).data
+        return None
+    
 # Full data for item page
 class ItemDetailSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
@@ -61,12 +80,12 @@ class ItemDetailSerializer(serializers.ModelSerializer):
     # Use your model properties
     current_price = serializers.ReadOnlyField()
     display_category = serializers.ReadOnlyField()
-    average_rating = serializers.ReadOnlyField()
     review_count = serializers.ReadOnlyField()
     is_in_stock = serializers.ReadOnlyField()
     discount_percentage = serializers.ReadOnlyField()
     is_sale_active = serializers.ReadOnlyField()
-    
+    display_condition = serializers.ReadOnlyField()
+
     # Get review statistics
     review_stats = serializers.SerializerMethodField()
 
@@ -78,8 +97,8 @@ class ItemDetailSerializer(serializers.ModelSerializer):
             'current_price', 'item_quantity', 'item_images',
             
             # Category & details
-            'item_category', 'display_category', 'custom_category',
-            'item_sku', 'item_origin', 'item_condition', 'item_weight', 
+            'display_category', 'custom_category',
+            'item_sku', 'item_origin', 'display_condition', 'item_weight', 
             'item_dimensions', 'technical_specs',
             
             # Flags
@@ -91,7 +110,7 @@ class ItemDetailSerializer(serializers.ModelSerializer):
             
             # Seller & analytics
             'seller_name', 'view_count', 'times_purchased',
-            'average_rating', 'review_count',
+             'review_count',
             
             # Timestamps
             'created_at', 'updated_at',

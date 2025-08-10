@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
-
+from rest_framework.viewsets import ModelViewSet
 from .models.item import ItemImage
 from .models import Item, Review
 from orders.models import Order  
@@ -54,14 +54,20 @@ class ItemViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         images = request.FILES.getlist('images')
+        image_urls = request.data.getlist('image_urls', [])
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         item = serializer.save()
+        # Handle uploaded files
         for image in images:
-            ItemImage.objects.create(item=item, image=image)
+            ItemImage.objects.create(item=item, image_file=image)
+        # Handle URLs
+        for url in image_urls:
+            if url:
+                ItemImage.objects.create(item=item, image_url=url)
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -69,11 +75,15 @@ class ItemViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         item = serializer.save()
         images = request.FILES.getlist('images')
-        if images:
+        image_urls = request.data.getlist('image_urls', [])
+        if images or image_urls:
             # Optionally clear old images
             item.item_images.all().delete()
             for image in images:
-                ItemImage.objects.create(item=item, image=image)
+                ItemImage.objects.create(item=item, image_file=image)
+            for url in image_urls:
+                if url:
+                    ItemImage.objects.create(item=item, image_url=url)
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data)
 
@@ -95,57 +105,38 @@ class ItemViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=['get'])
-    def reviews(self, request, pk=None):
-        """GET /items/{id}/reviews/ - List reviews for an item"""
+    def suggestions(self, request, pk=None):
+        """GET /items/{id}/suggestions/ - Get recommendations, related, seller's other items, and best sellers in category"""
         item = self.get_object()
-        reviews = Review.objects.filter(item=item).order_by('-created_at')
-        serializer = ReviewSerializer(reviews, many=True)
-        return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
-    def increment_view(self, request, pk=None):
-        """POST /items/{id}/increment_view/ - Increment item view count"""
-        item = self.get_object()
-        new_count = item.increment_view_count()
-        return Response({'view_count': new_count})
-
-    @action(detail=False, methods=['get'])
-    def trending(self, request):
-        limit = int(request.GET.get('limit', 10))
-        items = Item.get_trending_items(limit=limit)
-        serializer = ItemListSerializer(items, many=True)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'])
-    def categories(self, request):
-        categories = Item.get_all_categories()
-        return Response({'categories': categories})
-
-    @action(detail=False, methods=['get'])
-    def best_sellers(self, request):
-        items_per_category = int(request.GET.get('items_per_category', 5))
-        max_categories = int(request.GET.get('max_categories', 6))
-        best_sellers = Item.get_best_sellers_by_category(
-            items_each_category=items_per_category,
-            max_categories=max_categories
+        # Other items in the same category (excluding current item)
+        related = Item.objects.filter(
+            item_category=item.display_category
+        ).exclude(id=item.id)[:8]
+        # Other items from the same seller (excluding current item)
+        seller_items = Item.objects.filter(
+            seller=item.seller
+        ).exclude(id=item.id)[:8]
+        # Best sellers in the same category (excluding current item)
+        best_sellers_by_category = Item.get_best_sellers_by_category(
+            items_each_category=8,
+            max_categories=1
         )
-        result = {}
-        for category_name, items in best_sellers.items():
-            result[category_name] = ItemListSerializer(items, many=True).data
-        return Response(result)
-
-    @action(detail=False, methods=['get'])
-    def homepage_recommendations(self, request):
-        """GET /items/homepage-recommendations/ - Get recommended items for homepage"""
-        limit = int(request.GET.get('limit', 10))
-        items = Item.get_recommendations(request, limit=limit)
-        serializer = ItemListSerializer(items, many=True)
-        return Response(serializer.data)
+        best_sellers = best_sellers_by_category.get(item.display_category, [])
+        best_sellers = [i for i in best_sellers if i.id != item.id]
+    
+        return Response({
+            'related': ItemListSerializer(related, many=True, context={'request': request}).data,
+            'seller_items': ItemListSerializer(seller_items, many=True, context={'request': request}).data,
+            'best_sellers_in_category': ItemListSerializer(best_sellers, many=True, context={'request': request}).data,
+        })
 
 # ==================== REVIEW ENDPOINTS ====================
 
-class ReviewView(APIView):
-    permission_classes = [IsAuthenticated]
+class ReviewView(ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, item_id):
         """POST /items/{item_id}/reviews/ - Create new review for an item"""
@@ -158,7 +149,8 @@ class ReviewView(APIView):
             review = serializer.save(
                 reviewer=request.user,
                 item=item,
-                order=order
+                order=order,
+                media=request.media,
             )
             response_serializer = ReviewSerializer(review)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
@@ -190,9 +182,25 @@ class ReviewView(APIView):
         review.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class MyReviewableItemsView(APIView):
-    permission_classes = [IsAuthenticated]
+    @action(detail=True, methods=['post'])
+    def upvote(self, request, pk=None):
+        review = get_object_or_404(Review, id=pk)
+        user = request.user
+        if review.upvoted_by.filter(id=user.id).exists():
+            review.helpful_count -= 1
+            review.upvoted_by.remove(user)
+            is_upvoted = False
+        else:
+            review.helpful_count += 1
+            review.upvoted_by.add(user)
+            is_upvoted = True
+        review.save()
+        return Response({
+            'helpful_count': review.helpful_count,
+            'is_upvoted': is_upvoted
+        }, status=status.HTTP_200_OK)
 
+class MyReviewableItemsView(APIView):
     def get(self, request):
         """GET /my-reviewable-items/ - List items user can review"""
         user_orders = Order.objects.filter(

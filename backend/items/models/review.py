@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Avg, Count, Q
+# For checking media types
+import mimetypes
 
 class Review(models.Model):
     ''' FIELDS'''
@@ -29,10 +31,8 @@ class Review(models.Model):
     )
 
     # Upvotes
-    helpful_count = models.PositiveIntegerField(
-        default=0,
-        help_text="How many users found this review helpful"
-    )
+    helpful_count = models.IntegerField(default=0)
+    upvoted_by = models.ManyToManyField(User, related_name='upvoted_reviews', blank=True)
     
     # Seller response to the review
     seller_response = models.TextField(
@@ -93,6 +93,11 @@ class Review(models.Model):
         if self.order.status not in ['delivered', 'completed']:
             raise ValidationError("Can only review after order is delivered")
         
+        if self.media: 
+            mime_type, _ = mimetypes.guess_type(self.media.name)
+            if not mime_type or not mime_type.startswith(('image', 'video')):
+                raise ValidationError("Only image or video files are allowed")
+    
         # Media file less than 100MB 
         if self.media and self.media.size > 100 * 1024 * 1024:  # 100MB limit
             raise ValidationError("File too large. Maximum size is 100MB.")
@@ -140,9 +145,9 @@ class Review(models.Model):
         
         # Rating distribution
         distribution = reviews.values('rating').annotate(count=Count('rating'))
-        rating_dist = {i: 0 for i in range(1, 6)}
+        rating_dist = {str(i): 0 for i in range(5, 0, -1)}
         for entry in distribution:
-            rating_dist[entry['rating']] = entry['count']
+            rating_dist[str(entry['rating'])] = entry['count']
         
         # Calculations
         total = stats['total_reviews']

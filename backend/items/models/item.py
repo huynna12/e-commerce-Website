@@ -20,7 +20,8 @@ CONTENTS:
 '''
 class ItemImage(models.Model):
     item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='item_images')
-    image = models.ImageField(upload_to='item_images/', default='item_images/default.png')
+    image_file = models.ImageField(upload_to='item_images/', default='item_images/default.png')
+    image_url = models.CharField(blank=True)
 
 class Item(models.Model):
     ''' FIELDS AND CHOICES '''
@@ -44,6 +45,7 @@ class Item(models.Model):
     CONDITION_CHOICES = [
         ('new', 'New'),
         ('used', 'Used'),
+        ('open_box', 'Open Box'),
         ('refurbished', 'Refurbished'),
     ]
     
@@ -132,6 +134,10 @@ class Item(models.Model):
             return self.custom_category.title()
         return self.get_item_category_display()
 
+    @property
+    def display_condition(self):
+        return self.get_item_condition_display()
+    
     # Display current price, item_price or sale_price depending on sale status
     @property
     def current_price(self):
