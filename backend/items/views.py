@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
+from django.apps import apps
 from .models.item import ItemImage
 from .models import Item, Review
 from orders.models import Order  

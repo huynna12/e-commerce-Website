@@ -25,23 +25,37 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+# Base class for profile 
 class BuyerSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    # Only include public fields
-    class Meta:
+    buyer_orders = serializers.SerializerMethodField()
+    
+    class Meta: 
         model = Profile
         fields = [
-            'username', 'image', 'bio', 'created_at'
+            'username', 'image', 'bio', 'created_at', 'phone_number', 
+            'address', 'city', 'postal_code', 'total_sales', 'is_seller',
+            'buyer_orders',
+        ]
+    
+    def get_buyer_orders(self, obj):
+        # All orders placed by this user as a buyer
+        return [order.id for order in obj.user.orders.all()]
+
+class SellerSerializer(BuyerSerializer):
+    seller_orders = serializers.SerializerMethodField()
+
+    class Meta(BuyerSerializer.Meta):
+        fields = BuyerSerializer.Meta.fields + [
+            'seller_rating', 'total_sales', 'marketing_emails', 'seller_orders'
         ]
 
-class SellerSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    class Meta:
-        model = Profile
-        fields = [
-            'username', 'image', 'bio', 'is_seller', 'seller_rating',
-            'total_sales', 'created_at'
-        ]
+    def get_seller_orders(self, obj):
+        # All orders where this user is the seller
+        # Find all OrderItems where item.seller == obj.user, then get their orders
+        from orders.models import OrderItem
+        order_ids = OrderItem.objects.filter(item__seller=obj.user).values_list('order_id', flat=True).distinct()
+        return list(order_ids)
 
 class ProfileCreateUpdate(serializers.ModelSerializer):
     class Meta:
