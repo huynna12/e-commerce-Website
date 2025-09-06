@@ -7,10 +7,13 @@ import Navbar from './Navbar';
 import PropTypes from 'prop-types';
 
 const Form = ({ route, method }) => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [password2, setPassword2] = useState('');
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    password2: "",
+  });
+
   const [loading, setLoading] = useState(false);
   const [hovered, setHovered] = useState(null);
   const [error, setError] = useState('');
@@ -33,19 +36,32 @@ const Form = ({ route, method }) => {
     return 'An unknown error occurred.';
   }
 
+  const updateData = (name, value) => {
+    setFormData({ ...formData, [name]: value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const payload = method === 'register'
-        ? { username, email, password, password2 }
-        : { username, password };
+      const payload =
+        method === 'register'
+          ? {
+              username: formData.username,
+              email: formData.email,
+              password: formData.password,
+              password2: formData.password2,
+            }
+          : {
+              username: formData.username,
+              password: formData.password,
+            };
       const res = await api.post(route, payload);
       if (method === 'login') {
         localStorage.setItem(ACCESS_TOKEN, res.data.access);
         localStorage.setItem(REFRESH_TOKEN, res.data.refresh);
-        localStorage.setItem('username', username);
+        localStorage.setItem('username', formData.username);
         navigate('/heidi');
       } else {
         navigate('/login');
@@ -67,9 +83,9 @@ const Form = ({ route, method }) => {
       <div className="flex items-center justify-center min-h-screen">
         <form
           onSubmit={handleSubmit}
-          className="bg-[#F8EEDF] shadow-lg rounded-2xl px-8 pt-8 pb-8 w-full max-w-sm flex flex-col items-center border-2 border-black"
+          className="form-container max-w-sm"
         >
-          <h1 className="text-3xl font-bold mb-8 text-[#8E1616]">{name}</h1>
+          <h1 className="form-heading">{name}</h1>
           <div className="w-full mb-8 flex justify-center">
             <div className="relative flex w-80 h-14 bg-white border-2 border-black rounded-full overflow-hidden">
               <span
@@ -108,49 +124,49 @@ const Form = ({ route, method }) => {
               {error}
             </div>
           )}
-          <label className="w-full text-left mb-1 font-medium text-black" htmlFor="username">Username</label>
+          <label className="label" htmlFor="username">Username</label>
           <input
-            id="username"
-            className="form-input mb-4 w-full px-3 py-2 border border-[#E8C999] rounded focus:outline-none focus:ring-2 focus:ring-[#E8C999] bg-white text-black"
+            name="username"
+            className="form-input"
             type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
+            value={formData.username}
+            onChange={e => updateData(e.target.name, e.target.value)}
             placeholder="Enter your username"
             required
           />
           {method === 'register' && (
             <>
-              <label className="w-full text-left mb-1 font-medium text-black" htmlFor="email">Email</label>
+              <label className="label" htmlFor="email">Email</label>
               <input
-                id="email"
-                className="form-input mb-4 w-full px-3 py-2 border border-[#E8C999] rounded focus:outline-none focus:ring-2 focus:ring-[#E8C999] bg-white text-black"
+                name="email"
+                className="form-input"
                 type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={e => updateData(e.target.name, e.target.value)}
                 placeholder="Enter your email"
                 required
               />
             </>
           )}
-          <label className="w-full text-left mb-1 font-medium text-black" htmlFor="password">Password</label>
+          <label className="label" htmlFor="password">Password</label>
           <input
-            id="password"
-            className="form-input mb-4 w-full px-3 py-2 border border-[#E8C999] rounded focus:outline-none focus:ring-2 focus:ring-[#E8C999] bg-white text-black"
+            name="password"
+            className="form-input"
             type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
+            value={formData.password}
+            onChange={e => updateData(e.target.name, e.target.value)}
             placeholder="Enter your password"
             required
           />
           {method === 'register' && (
             <>
-              <label className="w-full text-left mb-1 font-medium text-black" htmlFor="password2">Confirm Password</label>
+              <label className="label" htmlFor="password2">Confirm Password</label>
               <input
-                id="password2"
-                className="form-input mb-8 w-full px-3 py-2 border border-[#E8C999] rounded focus:outline-none focus:ring-2 focus:ring-[#E8C999] bg-white text-black"
+                name="password2"
+                className="form-input"
                 type="password"
-                value={password2}
-                onChange={e => setPassword2(e.target.value)}
+                value={formData.password2}
+                onChange={e => updateData(e.target.name, e.target.value)}
                 placeholder="Confirm your password"
                 required
               />
@@ -158,7 +174,7 @@ const Form = ({ route, method }) => {
           )}
           {loading && <LoadingIndicator />}
           <button
-            className="form-button w-full py-3 bg-black text-[#F8EEDF] px-4 rounded-full hover:bg-[#8E1616] hover:text-white transition-colors font-semibold"
+            className="form-btn"
             type="submit"
             disabled={loading}
           >

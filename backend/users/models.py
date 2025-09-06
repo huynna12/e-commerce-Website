@@ -7,7 +7,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
     # Profile information
-    image = models.ImageField(default='profilepic.png', upload_to='profile_pictures')
+    image = models.ImageField(default='profile_ava/default.png', upload_to='profile_ava')
     bio = models.TextField(max_length=500, blank=True, help_text="Tell us about yourself")
     
     # Contact information

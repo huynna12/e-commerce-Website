@@ -1,18 +1,14 @@
 from rest_framework import serializers
 from .models import Item, Review, Promotion
 from .models.item import ItemImage
+from django.conf import settings
 
-'''
-CONTENTS: 
-├── Review Serializer
-├── Review Create Serializer
-├── Item List Serializer
-├── Item Detail Serializer
-├── Item Create Serializer
-'''
+def _default_image_data(context):
+    request = context.get('request') if context else None
+    default_rel = settings.MEDIA_URL.rstrip('/') + '/item_images/default.png'
+    default_url = request.build_absolute_uri(default_rel) if request else default_rel
+    return {'id': None, 'image_file': default_url, 'image_url': ''}
 
-# Serializers for Review model but not having item, since this is called 
-# inside ItemDetailSerializer for ItemPage
 class ReviewSerializer(serializers.ModelSerializer):
     reviewer = serializers.CharField(source='reviewer.username', read_only=True)
     is_upvoted = serializers.SerializerMethodField()
@@ -32,11 +28,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             return obj.upvoted_by.filter(id=user.id).exists()
         return False
 
-
-# Creating and updating reviews (same fields for both operations)
 class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
     order_id = serializers.IntegerField(required=False, allow_null=True)
-    
     class Meta:
         model = Review
         fields = ['rating', 'content', 'order_id', 'media']
@@ -46,7 +39,6 @@ class ItemImageSerializer(serializers.ModelSerializer):
         model = ItemImage
         fields = ['id', 'image_file', 'image_url']
 
-# Homepage and search results serializer
 class ItemListSerializer(serializers.ModelSerializer):
     current_price = serializers.ReadOnlyField()  
     display_category = serializers.ReadOnlyField()  
@@ -58,7 +50,7 @@ class ItemListSerializer(serializers.ModelSerializer):
         model = Item
         fields = [
             'id', 'item_name', 'current_price', 'item_image',
-            'display_category', 'is_featured', 'is_on_sale',
+            'display_category', 'is_on_sale',
             'is_in_stock', 'review_stats'
         ]
 
@@ -68,16 +60,13 @@ class ItemListSerializer(serializers.ModelSerializer):
     def get_item_image(self, obj):
         first_image = obj.item_images.first()
         if first_image:
-            return ItemImageSerializer(first_image).data
-        return None
-    
-# Full data for item page
+            return ItemImageSerializer(first_image, context=self.context).data
+        return _default_image_data(self.context)
+
 class ItemDetailSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
     seller_name = serializers.CharField(source='seller.username', read_only=True)
-    item_images = ItemImageSerializer(many=True, read_only=True)
-
-    # Use your model properties
+    item_images = serializers.SerializerMethodField()
     current_price = serializers.ReadOnlyField()
     display_category = serializers.ReadOnlyField()
     review_count = serializers.ReadOnlyField()
@@ -85,58 +74,47 @@ class ItemDetailSerializer(serializers.ModelSerializer):
     discount_percentage = serializers.ReadOnlyField()
     is_sale_active = serializers.ReadOnlyField()
     display_condition = serializers.ReadOnlyField()
-
-    # Get review statistics
     review_stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Item
         fields = [
-            # Basic info
             'id', 'item_name', 'item_summary', 'item_desc', 'item_price', 
             'current_price', 'item_quantity', 'item_images',
-            
-            # Category & details
             'display_category', 'custom_category',
-            'item_sku', 'item_origin', 'display_condition', 'item_weight', 
-            'item_dimensions', 'technical_specs',
-            
-            # Flags
-            'is_featured', 'is_available', 'is_on_sale', 'is_digital', 'is_in_stock',
-            
-            # Sale info
+            'item_sku', 'item_origin', 'display_condition',
+            'is_available', 'is_on_sale', 'is_digital', 'is_in_stock',
             'sale_price', 'sale_start_date', 'sale_end_date', 'is_sale_active',
             'discount_percentage',
-            
-            # Seller & analytics
             'seller_name', 'view_count', 'times_purchased',
-             'review_count',
-            
-            # Timestamps
-            'created_at', 'updated_at',
-            
-            # Related data
+            'review_count', 'created_at', 'updated_at',
             'reviews', 'review_stats'
         ]
 
     def get_review_stats(self, obj):
         return Review.get_item_stats(obj)
+    
+    def get_item_images(self, obj):
+        images = list(obj.item_images.all())
+        if images:
+            return ItemImageSerializer(images, many=True, context=self.context).data
+        return [_default_image_data(self.context)]
 
 class ItemCreateUpdateSerializer(serializers.ModelSerializer):
+    seller = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Item
         fields = [
             'item_name', 'item_summary', 'item_desc', 'item_price', 'item_quantity', 'item_category', 
-            'custom_category', 'item_origin', 'item_condition', 'item_weight', 'item_dimensions',
-            'technical_specs', 'is_featured', 'is_available', 'is_on_sale', 'is_digital', 'sale_price',
-            'sale_start_date', 'sale_end_date'
+            'custom_category', 'item_origin', 'item_condition', 'is_available', 'is_on_sale', 
+            'is_digital', 'sale_price', 'sale_start_date', 'sale_end_date', 'item_sku', 'seller', 'id'
         ]
 
     def create(self, validated_data):
-        images_data = validated_data.pop('images', [])
+        images_data = validated_data.pop('images', None)
         item = Item.objects.create(**validated_data)
-        for image_data in images_data:
-            ItemImage.objects.create(item=item, **image_data)
+        self._set_images(item, images_data)
         return item
 
     def update(self, instance, validated_data):
@@ -144,9 +122,20 @@ class ItemCreateUpdateSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        if images_data is not None:
-            # Optionally clear existing images or update as needed
-            instance.images.all().delete()
-            for image_data in images_data:
-                ItemImage.objects.create(item=instance, **image_data)
+        self._set_images(instance, images_data)
         return instance
+
+    def _set_images(self, item, images_data):
+        # Remove all images for this item
+        item.item_images.all().delete()
+
+        if images_data:
+            for image_data in images_data:
+                if not image_data:
+                    continue
+                file_val = image_data.get('image_file')
+                url_val = image_data.get('image_url')
+                if file_val:
+                    ItemImage.objects.create(item=item, image_file=file_val)
+                elif url_val and str(url_val).strip():
+                    ItemImage.objects.create(item=item, image_url=str(url_val).strip())

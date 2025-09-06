@@ -7,7 +7,7 @@ import '../index.css';
 import Rating from '../components/Rating';
 import ItemRow from '../components/ItemRow';
 import ReviewCard from '../components/ReviewCard';
-import ImagesDisplay from '../components/ImagesDisplay';
+import ImagesDisplayGrid from '../components/ImagesDisplayGrid';
 
 const ItemDetail = () => {
   const { itemId } = useParams();
@@ -34,25 +34,13 @@ const ItemDetail = () => {
   return (
     <>
       <Navbar />
+      {/* Content is here */}
       <main className='screen-max-width px-8 py-24'>
         <div className='grid grid-cols-5 gap-8'>
           <div className='flex flex-col items-center justify-center col-span-3'>
-            {item.item_images && item.item_images.length > 0 ? (
-              <div className={`flex ${item.item_images.length > 1 ? 'gap-2 flex-wrap justify-center' : 'justify-center'}`}>
-                {item.item_images.map((img, idx) => (
-                  <img
-                    key={img.id}
-                    src={img.image_file || img.image_url}
-                    alt={`${item.item_name} ${idx + 1}`}
-                    className={item.item_images.length === 1
-                      ? 'w-full max-w-xl h-auto border-2 border-black rounded shadow'
-                      : 'w-48 h-48 object-cover border rounded'}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className='text-[#E8C999] italic'>No images available</div>
-            )}
+            <div className='col-span-3 flex flex-col items-center justify-center'>
+          <ImagesDisplayGrid images={item.item_images} />
+        </div>
           </div>
 
           {/* Details Section */}

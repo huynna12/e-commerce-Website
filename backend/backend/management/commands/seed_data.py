@@ -34,6 +34,16 @@ class Command(BaseCommand):
     ]
 
     def handle(self, *args, **kwargs):
+        # Clear all relevant tables before seeding
+        self.stdout.write('Clearing all data...')
+        Review.objects.all().delete()
+        OrderItem.objects.all().delete()
+        Order.objects.all().delete()
+        ItemImage.objects.all().delete()
+        Item.objects.all().delete()
+        User.objects.filter(is_superuser=False).delete()
+        self.stdout.write(self.style.SUCCESS('All data cleared.'))
+
         fake = Faker()
         sellers = self._create_users(fake, 10, prefix='seller')
         buyers = self._create_users(fake, 10, prefix='buyer')
@@ -117,7 +127,6 @@ class Command(BaseCommand):
             if order.status != 'delivered':
                 continue
             for order_item in order.items.all():
-                # This check is now redundant, but keep for safety:
                 if order.user == order_item.item.seller:
                     continue
                 if not Review.objects.filter(order=order, item=order_item.item, reviewer=order.user).exists():

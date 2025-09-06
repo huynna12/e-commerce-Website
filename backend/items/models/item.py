@@ -20,7 +20,7 @@ CONTENTS:
 '''
 class ItemImage(models.Model):
     item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='item_images')
-    image_file = models.ImageField(upload_to='item_images/', default='item_images/default.png')
+    image_file = models.ImageField(upload_to='item_images/', null=True, blank=True)
     image_url = models.CharField(blank=True)
 
 class Item(models.Model):
@@ -62,12 +62,7 @@ class Item(models.Model):
         default="Product description",
         help_text="Detailed product description"
     )
-    technical_specs = models.JSONField(
-        default=dict, 
-        blank=True, 
-        help_text="Technical specifications as key-value pairs"
-    )
-    
+
     item_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal(0.01))])
     item_quantity = models.PositiveIntegerField(default=0)
 
@@ -79,11 +74,8 @@ class Item(models.Model):
     item_sku = models.CharField(max_length=50, unique=True, blank=True)
     item_origin = models.CharField(max_length=100, default='Unknown')
     item_condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
-    item_weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Weight in kg")
-    item_dimensions = models.JSONField(default=dict, blank=True, help_text="Dimensions as {length, width, height} in cm")
     
     # Flags
-    is_featured = models.BooleanField(default=False, db_index=True)
     is_available = models.BooleanField(default=True, db_index=True)
     is_on_sale = models.BooleanField(default=False, db_index=True)
     is_digital = models.BooleanField(default=False, help_text="Digital product (no shipping required)")
@@ -120,7 +112,6 @@ class Item(models.Model):
             models.Index(fields=['custom_category', 'is_available']),      # Custom category browsing
             models.Index(fields=['is_available', '-view_count']),          # Trending items
             models.Index(fields=['is_available', '-times_purchased']),     # Best sellers
-            models.Index(fields=['is_featured', 'is_available']),          # Featured items
             models.Index(fields=['is_on_sale', 'is_available']),           # Sale items
             models.Index(fields=['item_price']),                           # Price range filtering (within available items)
             models.Index(fields=['seller', 'is_available']),               # Seller's available items
@@ -254,7 +245,7 @@ class Item(models.Model):
     # Search items with multiple filters
     @classmethod
     def search_items(cls, query=None, category=None, min_price=None, max_price=None, 
-                    condition=None, is_on_sale=None, is_featured=None, min_rating=None):
+                    condition=None, is_on_sale=None, min_rating=None):
         items = cls.objects.select_related('seller').filter(is_available=True)
 
         # Text search filter
@@ -281,8 +272,6 @@ class Item(models.Model):
             items = items.filter(item_condition=condition)
         if is_on_sale is not None:
             items = items.filter(is_on_sale=is_on_sale)
-        if is_featured is not None:
-            items = items.filter(is_featured=is_featured)
         
         # Rating filter (requires subquery)
         if min_rating is not None:
@@ -293,7 +282,7 @@ class Item(models.Model):
             ).values('id')
             items = items.filter(id__in=Subquery(rated_items))
         
-        return items.order_by('-is_featured', '-view_count', '-created_at')
+        return items.order_by('-view_count', '-created_at')
 
     # Return a sorted post of all unique display category names for available items
     # with custom categories included if not empty
@@ -322,14 +311,6 @@ class Item(models.Model):
         return cls.objects.filter(
             is_available=True
         ).order_by('-view_count', '-times_purchased')[:limit]
-    
-    # Return featured items
-    @classmethod
-    def get_featured_items(cls, limit=10):
-        return cls.objects.filter(
-            is_featured=True,
-            is_available=True
-        ).order_by('-created_at')[:limit]
     
     # Return best selling items across some categories
     @classmethod

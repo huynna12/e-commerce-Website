@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Rating from './Rating';
-const apiUrl = import.meta.env.VITE_API_URL;
+import { apiUrl } from '../constants';
+import { DEFAULT_IMAGE } from "../constants";
 
 const ItemRow = ({ title, itemList }) => {
   return (
@@ -10,10 +11,12 @@ const ItemRow = ({ title, itemList }) => {
       <div className='flex gap-8 overflow-x-auto'>
         {itemList && itemList.length > 0 ? (
           itemList.map(item => {
-            const image_src =
-              item.item_image?.image_url
-                ? item.item_image.image_url
-                : apiUrl + item.item_image?.image_file;
+            let image_src = DEFAULT_IMAGE;
+            if (item.item_image?.image_url && item.item_image.image_url !== "null" && item.item_image.image_url !== "") {
+              image_src = item.item_image.image_url;
+            } else if (item.item_image?.image_file && item.item_image.image_file !== "null" && item.item_image.image_file !== "") {
+              image_src = apiUrl + item.item_image.image_file;
+            }
             return (
               <Link to={`/items/${item.id}`} className='block' key={item.id}>
                 <div className='bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-4 cursor-pointer flex flex-col items-center w-56'>

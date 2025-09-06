@@ -77,7 +77,7 @@ const Navbar = () => {
         ) : (
           <>
             <Link
-              to="/sell_item"
+              to="/items/create"
               className="flex items-center gap-2 font-semibold text-black hover:text-[#8E1616] transition-colors">    
               <span>Sell Item</span>
             </Link>

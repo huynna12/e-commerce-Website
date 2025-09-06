@@ -1,16 +1,14 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 import api from '../api';
-import ImagesDisplay from './ImagesDisplay'
+import ImagesDisplayRow from './ImagesDisplayRow'
 
 const ReviewCard = ({ review}) => {
-    const [helpfulCount, setHelpfulCount] = useState(review.helpful_count);
     const [upvoted, setUpvoted] = useState(review.is_upvoted);
 
 const handleUpvote = async () => {
     try {
         const res = await api.post(`/reviews/${review.id}/upvote/`);
-        setHelpfulCount(res.data.helpful_count);
         setUpvoted(res.data.is_upvoted);
     } catch (error) {
         if (error.response && error.response.status === 401){
@@ -21,7 +19,6 @@ const handleUpvote = async () => {
         }
     }
 };
-
     return (
         <div className="mb-4">
             <div className="flex gap-x-4 mb-2">
@@ -40,7 +37,7 @@ const handleUpvote = async () => {
                 </button>
             </div>
             <p className="py-2">{review.content}</p>
-            <ImagesDisplay images={review.media}/>
+            <ImagesDisplayRow images={review.media}/>
         </div>
     )
 }

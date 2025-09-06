@@ -1,7 +1,7 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -28,13 +28,11 @@ class HomepageView(APIView):
 
     def get(self, request):
         trending = Item.get_trending_items()
-        featured = Item.get_featured_items()
         recently_viewed = Item.get_recently_viewed(request, limit=10)
         recommendations = Item.get_recommendations(request, limit=10)
 
         return Response({
             'trending': ItemListSerializer(trending, many=True).data,
-            'featured': ItemListSerializer(featured, many=True).data,
             'recently_viewed': ItemListSerializer(recently_viewed, many=True).data,
             'recommended': ItemListSerializer(recommendations, many=True).data,
             'categories': Item.get_all_categories(),
@@ -42,9 +40,14 @@ class HomepageView(APIView):
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
-    permission_classes = [AllowAny]
+    
     # lookup_field = 'slug'
-
+    def get_permissions(self):
+        # allow anonymous read access (list/retrieve/suggestions), require auth for create/update/delete
+        if self.action in ['list', 'retrieve', 'suggestions']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+    
     def get_serializer_class(self):
         if self.action == 'list':
             return ItemListSerializer
@@ -55,10 +58,14 @@ class ItemViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         images = request.FILES.getlist('images')
-        image_urls = request.data.getlist('image_urls', [])
-        serializer = self.get_serializer(data=request.data)
+        image_urls = request.data.get('image_urls', [])
+        if isinstance(image_urls, str):
+            image_urls = [image_urls]
+        data = request.data
+        # REMOVE: data['seller'] = request.user.id
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        item = serializer.save()
+        item = serializer.save(seller=request.user) 
         # Handle uploaded files
         for image in images:
             ItemImage.objects.create(item=item, image_file=image)
@@ -101,7 +108,6 @@ class ItemViewSet(viewsets.ModelViewSet):
             max_price=self.request.query_params.get('max_price'),
             condition=self.request.query_params.get('condition'),
             is_on_sale=self.request.query_params.get('is_on_sale'),
-            is_featured=self.request.query_params.get('is_featured'),
             min_rating=self.request.query_params.get('min_rating')
         )
 

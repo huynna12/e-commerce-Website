@@ -15,6 +15,25 @@ body, #root {
   padding: 0;
 }
 
+.form-container {
+  @apply bg-[#F8EEDF] shadow-lg rounded-2xl px-8 pt-8 pb-8 w-full flex flex-col items-center border-2 border-black;
+}
+
+.form-btn {
+  @apply w-full py-3 bg-black text-[#F8EEDF] px-4 rounded-full hover:bg-[#8E1616] hover:text-white transition-colors font-semibold;
+}
+
+.form-heading {
+  @apply text-3xl font-bold mb-8 text-[#8E1616]
+}
+.label {
+  @apply w-full text-left mb-1 font-medium text-black
+}
+
+.form-input {
+  @apply mb-4 w-full px-3 py-2 border border-[#E8C999] rounded focus:outline-none focus:ring-2 focus:ring-[#E8C999] bg-white text-black;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:hover {      /* Text color */
@@ -31,4 +50,6 @@ canvas {
   position: relative;
   max-width: 1120px;
 }
+
+
 

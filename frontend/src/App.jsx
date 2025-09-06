@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Profile from './pages/Profile';
 import ItemDetail from './pages/ItemDetail';
 import './index.css';
+import AddItem from './pages/AddItem';
 
 function RegisterAndClear() {
   // Clear the old session data
@@ -26,7 +27,7 @@ function App() {
               // </ProtectedRoute>
             }
           />
-           <Route
+          <Route
             path="/heidi/"
             element={
               // <ProtectedRoute>
@@ -39,6 +40,13 @@ function App() {
             element={
                 <ItemDetail />
             }
+          />
+          {/* Adding item */}
+          <Route
+          path="items/create"
+          element={
+            <AddItem/>
+          } 
           />
           <Route path="/login" element={<Login  />}/>
           <Route path="/register" element={<RegisterAndClear  />}/>

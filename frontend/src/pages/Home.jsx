@@ -22,7 +22,6 @@ const Home = () => {
     <>
       <Navbar />
       <div className='px-8'>
-        <ItemRow title="Featured items" itemList={data.featured} />
         <ItemRow title="Trending" itemList={data.trending} />
         <ItemRow title="Recently viewed items" itemList={data.recently_viewed} />
         <ItemRow
