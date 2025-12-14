@@ -26,6 +26,7 @@ const Profile = () => {
   return (
     <main className="screen-max-width px-8 py-24 flex justify-center items-center">
       <div className="form-container">
+        {/* Profile image */}
         {profile.image && (
           <img
             src={profile.image}
@@ -34,12 +35,15 @@ const Profile = () => {
           />
         )}
         <div className="form-heading text-3xl font-bold text-center mb-2">{profile.username}</div>
+        
+        {/* Profile bio */}
         {profile.bio && (
           <p className="text-gray-700 text-center mb-4">
-            <span className="font-semibold">Bio:</span> {profile.bio}
+            <span className="font-semibold">Bio:</span> {profile.bio} This is the user's bio
           </p>
         )}
-        {/* Add more public fields as needed */}
+        
+
       </div>
     </main>
   );
