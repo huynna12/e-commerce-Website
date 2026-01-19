@@ -1,0 +1,55 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Env vars / secrets
+.env
+.env.*
+
+# Allow example env files to be committed
+!.env.example
+!**/.env.example
+
+# Django runtime (local/dev)
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/db.sqlite3-wal
+backend/db.sqlite3-shm
+backend/media/
+
+# Collected static (build output)
+staticfiles/
+backend/staticfiles/
+
+# Logs
+django_exceptions.log
+*.log
+
+# Node / frontend
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.sw?
