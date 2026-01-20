@@ -15,7 +15,7 @@ class ItemModelTest(TestCase):
             item_name='Test Item', 
             item_price=Decimal('100.00'),
             item_category='electronics',
-            item_quantity=10, item_weight=Decimal('1.0'), 
+            item_quantity=10,
             seller=self.user
         )
 
@@ -94,18 +94,20 @@ class ReviewModelTest(TestCase):
         self.seller = User.objects.create_user('seller', 'seller@example.com', 'pass')
         self.item = Item.objects.create(
             item_name='Test Item', item_price=Decimal('100.00'), item_category='electronics',
-            item_quantity=10, item_weight=Decimal('1.0'), seller=self.seller
+            item_quantity=10, seller=self.seller
         )
         self.order = Order.objects.create(user=self.reviewer, total_price=Decimal('100.00'), status='delivered')
         OrderItem.objects.create(order=self.order, item=self.item, quantity=1, price=Decimal('100.00'))
         self.review = Review.objects.create(
-            item=self.item, reviewer=self.reviewer, rating=4, comment='Great!', order=self.order
+            item=self.item, reviewer=self.reviewer, rating=4, content='Great!', order=self.order
         )
     
     def test_review_validation(self):
         # Test prevent self-review
         with self.assertRaises(ValidationError):
-            Review(item=self.item, reviewer=self.seller, rating=5, comment='Self review').full_clean()
+            seller_order = Order.objects.create(user=self.seller, total_price=Decimal('100.00'), status='delivered')
+            OrderItem.objects.create(order=seller_order, item=self.item, quantity=1, price=Decimal('100.00'))
+            Review(item=self.item, reviewer=self.seller, rating=5, content='Self review', order=seller_order).full_clean()
     
     def test_verified_purchase_logic(self):
         # Create new buyer with delivered order
@@ -164,7 +166,7 @@ class ReviewModelTest(TestCase):
         # Test item with no reviews
         new_item = Item.objects.create(
             item_name='New Item', item_price=Decimal('50.00'), item_category='electronics',
-            item_quantity=5, item_weight=Decimal('0.5'), seller=self.seller
+            item_quantity=5, seller=self.seller
         )
         stats = Review.get_item_stats(new_item)
         self.assertIsNone(stats)  # Returns None for no reviews
@@ -186,7 +188,7 @@ class ReviewModelTest(TestCase):
         
         Review.objects.create(
             item=self.item, reviewer=buyer2, rating=5, order=order2, 
-            media=test_file, comment="Great with photo!"
+            media=test_file, content="Great with photo!"
         )
         
         # Test getting reviews with media

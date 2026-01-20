@@ -13,6 +13,7 @@ from .serializers import (
     ItemListSerializer, ItemDetailSerializer, ItemCreateUpdateSerializer,
     ReviewSerializer, ReviewCreateUpdateSerializer, ItemImageSerializer
 )
+from .permissions import IsSellerOrReadOnly
 
 '''
 PAGE-SPECIFIC ENDPOINTS:
@@ -40,13 +41,8 @@ class HomepageView(APIView):
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
-    
-    # lookup_field = 'slug'
-    def get_permissions(self):
-        # allow anonymous read access (list/retrieve/suggestions), require auth for create/update/delete
-        if self.action in ['list', 'retrieve', 'suggestions']:
-            return [AllowAny()]
-        return [IsAuthenticated()]
+
+    permission_classes = [IsSellerOrReadOnly]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -58,48 +54,66 @@ class ItemViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         images = request.FILES.getlist('images')
-        image_urls = request.data.get('image_urls', [])
-        if isinstance(image_urls, str):
-            image_urls = [image_urls]
-        data = request.data
-        # REMOVE: data['seller'] = request.user.id
-        serializer = self.get_serializer(data=data)
+        if hasattr(request.data, 'getlist'):
+            image_urls = request.data.getlist('image_urls')
+        else:
+            image_urls = request.data.get('image_urls') or []
+            if not isinstance(image_urls, list):
+                image_urls = [image_urls]
+
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        item = serializer.save(seller=request.user) 
-        # Handle uploaded files
-        for image in images:
-            ItemImage.objects.create(item=item, image_file=image)
-        # Handle URLs
-        for url in image_urls:
-            if url:
-                ItemImage.objects.create(item=item, image_url=url)
+        item = serializer.save(seller=request.user)
+
+        images_data = [{'image_file': f} for f in images] + [
+            {'image_url': u} for u in image_urls if str(u).strip()
+        ]
+        serializer._set_images(item, images_data)
+
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+
+        images = request.FILES.getlist('images')
+        if hasattr(request.data, 'getlist'):
+            image_urls = request.data.getlist('image_urls')
+        else:
+            image_urls = request.data.get('image_urls') or []
+            if not isinstance(image_urls, list):
+                image_urls = [image_urls]
+
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         item = serializer.save()
-        images = request.FILES.getlist('images')
-        image_urls = request.data.getlist('image_urls', [])
+
         if images or image_urls:
-            # Optionally clear old images
-            item.item_images.all().delete()
-            for image in images:
-                ItemImage.objects.create(item=item, image_file=image)
-            for url in image_urls:
-                if url:
-                    ItemImage.objects.create(item=item, image_url=url)
+            images_data = [{'image_file': f} for f in images] + [
+                {'image_url': u} for u in image_urls if str(u).strip()
+            ]
+            serializer._set_images(item, images_data)
+
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data)
 
     def get_queryset(self):
         # Special case: user's own items
-        if (self.request.query_params.get('seller') == 'me' and 
-            self.request.user.is_authenticated):
+        seller_param = self.request.query_params.get('seller')
+        if seller_param == 'me' and self.request.user.is_authenticated:
             return Item.objects.filter(seller=self.request.user)
+
+        # Public seller page support: /items/?seller=<username>
+        if seller_param and seller_param != 'me':
+            qs = Item.objects.filter(seller__username=seller_param)
+            # Only the owner can see unavailable items.
+            if not (
+                self.request.user.is_authenticated
+                and self.request.user.username == seller_param
+            ):
+                qs = qs.filter(is_available=True)
+            return qs
         # Use model method for everything else
         return Item.search_items(
             query=self.request.query_params.get('search'),
@@ -118,7 +132,7 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         # Other items in the same category (excluding current item)
         related = Item.objects.filter(
-            item_category=item.display_category
+            item_category=item.item_category
         ).exclude(id=item.id)[:8]
         # Other items from the same seller (excluding current item)
         seller_items = Item.objects.filter(
@@ -129,7 +143,11 @@ class ItemViewSet(viewsets.ModelViewSet):
             items_each_category=8,
             max_categories=1
         )
-        best_sellers = best_sellers_by_category.get(item.display_category, [])
+        best_sellers_key = item.get_item_category_display()
+        if item.item_category == 'other' and item.custom_category:
+            best_sellers_key = item.custom_category.title()
+
+        best_sellers = best_sellers_by_category.get(best_sellers_key, [])
         best_sellers = [i for i in best_sellers if i.id != item.id]
     
         return Response({
@@ -141,56 +159,53 @@ class ItemViewSet(viewsets.ModelViewSet):
 # ==================== REVIEW ENDPOINTS ====================
 
 class ReviewView(ModelViewSet):
-    queryset = Review.objects.all()
-    serializer_class = ReviewSerializer
-    permission_classes = [AllowAny]
+    queryset = Review.objects.select_related('item', 'reviewer', 'order').all()
 
-    def post(self, request, item_id):
-        """POST /items/{item_id}/reviews/ - Create new review for an item"""
-        #  Later be item = get_object_or_404(Item, slug=item_slug)
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ReviewCreateUpdateSerializer
+        return ReviewSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ['update', 'partial_update', 'destroy']:
+            if not self.request.user.is_authenticated:
+                return qs.none()
+            return qs.filter(reviewer=self.request.user)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        item_id = serializer.validated_data.get('item_id')
+        order_id = serializer.validated_data.get('order_id')
+        if not item_id:
+            return Response({'item_id': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+        if not order_id:
+            return Response({'order_id': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+
         item = get_object_or_404(Item, id=item_id)
-        serializer = ReviewCreateUpdateSerializer(data=request.data)
-        if serializer.is_valid():
-            order_id = serializer.validated_data.get('order_id')
-            order = get_object_or_404(Order, id=order_id) if order_id else None
-            review = serializer.save(
-                reviewer=request.user,
-                item=item,
-                order=order,
-                media=request.media,
-            )
-            response_serializer = ReviewSerializer(review)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        order = get_object_or_404(Order, id=order_id)
 
-    def put(self, request, review_id):
-        """PUT /reviews/{review_id}/ - Update existing review"""
-        review = get_object_or_404(Review, id=review_id, reviewer=request.user)
-        serializer = ReviewCreateUpdateSerializer(review, data=request.data)
-        if serializer.is_valid():
-            updated_review = serializer.save()
-            response_serializer = ReviewSerializer(updated_review)
-            return Response(response_serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        review = serializer.save(
+            reviewer=request.user,
+            item=item,
+            order=order,
+        )
 
-    def patch(self, request, review_id):
-        """PATCH /reviews/{review_id}/ - Partially update existing review"""
-        review = get_object_or_404(Review, id=review_id, reviewer=request.user)
-        serializer = ReviewCreateUpdateSerializer(review, data=request.data, partial=True)
-        if serializer.is_valid():
-            updated_review = serializer.save()
-            response_serializer = ReviewSerializer(updated_review)
-            return Response(response_serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, review_id):
-        """DELETE /reviews/{review_id}/ - Delete existing review"""
-        review = get_object_or_404(Review, id=review_id, reviewer=request.user)
-        review.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        read_serializer = ReviewSerializer(review, context={'request': request})
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def upvote(self, request, pk=None):
+        if not request.user.is_authenticated:
+            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
         review = get_object_or_404(Review, id=pk)
         user = request.user
         if review.upvoted_by.filter(id=user.id).exists():

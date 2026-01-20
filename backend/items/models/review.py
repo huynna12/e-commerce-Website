@@ -54,6 +54,7 @@ class Review(models.Model):
 
     ''' META '''
     class Meta:
+        app_label = 'items'
         unique_together = ('order', 'item')  # One review per purchase
         ordering = ['-created_at']
 

@@ -22,6 +22,7 @@ class Promotion(models.Model):
     description = models.TextField(blank=True, help_text='Optional description for this promotion')
 
     class Meta:
+        app_label = 'items'
         ordering = ['-start_at']
         indexes = [
             models.Index(fields=['promo_type']),

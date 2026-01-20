@@ -21,7 +21,10 @@ CONTENTS:
 class ItemImage(models.Model):
     item = models.ForeignKey('Item', on_delete=models.CASCADE, related_name='item_images')
     image_file = models.ImageField(upload_to='item_images/', null=True, blank=True)
-    image_url = models.CharField(blank=True)
+    image_url = models.CharField(max_length=500, blank=True )
+
+    class Meta:
+        app_label = 'items'
 
 class Item(models.Model):
     ''' FIELDS AND CHOICES '''
@@ -51,7 +54,6 @@ class Item(models.Model):
     
     # Basic fields
     item_name = models.CharField(max_length=100, db_index=True)
-    # item_slug = models.SlugField(blank=True, unique=True)
     item_summary = models.CharField(
     max_length=200, 
     default="Product summary",
@@ -105,9 +107,10 @@ class Item(models.Model):
 
     ''' META AND INDEXES '''
     class Meta:
+        app_label = 'items'
         ordering = ['-created_at']
         indexes = [
-            # Core search queries (most important)
+            # Search queries
             models.Index(fields=['item_category', 'is_available']),        # Category browsing
             models.Index(fields=['custom_category', 'is_available']),      # Custom category browsing
             models.Index(fields=['is_available', '-view_count']),          # Trending items
@@ -356,8 +359,9 @@ class Item(models.Model):
         viewed.insert(0, item_id)
         request.session['viewed_items'] = viewed[:limit]  
 
-        ''' Comment out during tests: RequestFactory creates dict sessions without .modified attribute '''
-        request.session.modified = True
+        # RequestFactory tests sometimes use a plain dict for session.
+        if hasattr(request.session, 'modified'):
+            request.session.modified = True
     
     # Get recently viewed items from session
     @classmethod
