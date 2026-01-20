@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import api from "../api";
-import { REFRESH_TOKEN, ACCESS_TOKEN } from "../constants";
+import api from "../../api";
+import { REFRESH_TOKEN, ACCESS_TOKEN } from "../../constants";
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 
@@ -10,7 +10,6 @@ const ProtectedRoute = ({ children }) => {
 
     useEffect(() => {
         auth().catch(() => setIsAuthorized(false));
-        // eslint-disable-next-line
     }, []);
 
     const refreshToken = async () => {

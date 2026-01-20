@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import api from '../api';
-import ImagesDisplayRow from './ImagesDisplayRow'
+import api from '../../api';
+import ImagesDisplayRow from '../items/ImagesDisplayRow'
 
 const ReviewCard = ({ review}) => {
     const [upvoted, setUpvoted] = useState(review.is_upvoted);

@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaSearch, FaUser, FaSignOutAlt } from 'react-icons/fa';
-import { ACCESS_TOKEN } from '../constants';
+import { ACCESS_TOKEN } from '../../constants';
+import api from '../../api';
 
 const Navbar = () => {
-  const cartCount = 0; // Replace with actual cart count
+  const [cartCount, setCartCount] = useState(0);
   const [search, setSearch] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  const fetchCartCount = () => {
+    api.get('cart/').then((res) => {
+      setCartCount(res.data?.total_quantity || 0);
+    }).catch(() => {
+      setCartCount(0);
+    });
+  };
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -18,10 +27,27 @@ const Navbar = () => {
           let username = localStorage.getItem('username');
           setIsLoggedIn(true);
           setUser({ username: username || 'Profile'});
+
+          // Best-effort cart count (ignore failures)
+          fetchCartCount();
         }
     };
     checkAuthStatus();
   }, []);
+
+  useEffect(() => {
+    const onCartUpdated = (e) => {
+      const next = e?.detail?.total_quantity;
+      if (typeof next === 'number') {
+        setCartCount(next);
+        return;
+      }
+      if (isLoggedIn) fetchCartCount();
+    };
+
+    window.addEventListener('cart:updated', onCartUpdated);
+    return () => window.removeEventListener('cart:updated', onCartUpdated);
+  }, [isLoggedIn]);
 
   const displayName = user?.username || 'Profile';
 
@@ -34,7 +60,8 @@ const Navbar = () => {
     localStorage.clear()
     setIsLoggedIn(false);
     setUser(null);
-    navigate('/heidi');
+    setCartCount(0);
+    navigate('/');
     alert('Successfully logged out!');
   };
 
@@ -42,7 +69,7 @@ const Navbar = () => {
     <nav className="w-full flex items-center justify-between p-3 bg-[#F8EEDF] border-b-2 border-black">
       {/* Logo */}
       <div className="flex items-center">
-        <Link to="/heidi">
+        <Link to="/">
           <img src="/assets/images/logo.png" alt="H-Commerce Logo" className="ml-3 h-10 w-auto" />
         </Link>
       </div>
@@ -65,16 +92,7 @@ const Navbar = () => {
 
       {/* Conditional Navigation Buttons */}
       <div className="flex items-center space-x-4 mr-3">
-        {!isLoggedIn ? (
-          <>
-            <Link to="/register" className="font-semibold text-black hover:text-[#8E1616] transition-colors">
-              Sign Up
-            </Link>
-            <Link to="/login" className="font-semibold text-black hover:text-[#8E1616] transition-colors">
-              Log In
-            </Link>
-          </>
-        ) : (
+        {isLoggedIn ? (
           <>
             <Link
               to="/items/create"
@@ -97,6 +115,15 @@ const Navbar = () => {
               <FaSignOutAlt size={16} />
               <span>Logout</span>
             </button>
+          </>
+        ) : (
+          <>
+            <Link to="/register" className="font-semibold text-black hover:text-[#8E1616] transition-colors">
+              Sign Up
+            </Link>
+            <Link to="/login" className="font-semibold text-black hover:text-[#8E1616] transition-colors">
+              Log In
+            </Link>
           </>
         )}
 

@@ -1,13 +1,13 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/layout/Navbar';
 import NotFound from './NotFound';
 import '../index.css';
-import Rating from '../components/Rating';
-import ItemRow from '../components/ItemRow';
-import ReviewCard from '../components/ReviewCard';
-import ImagesDisplayGrid from '../components/ImagesDisplayGrid';
+import Rating from '../components/ui/Rating';
+import ItemRow from '../components/items/ItemRow';
+import ReviewCard from '../components/items/ReviewCard';
+import ImagesDisplayGrid from '../components/items/ImagesDisplayGrid';
 
 const ItemDetail = () => {
   const { itemId } = useParams();
@@ -88,6 +88,16 @@ const ItemDetail = () => {
               className='form-button w-full py-3 bg-black text-[#E8C999] px-4 rounded-full hover:bg-[#8E1616] hover:text-white transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed'
               type='button'
               disabled={!item.is_in_stock || item.item_quantity === 0}
+              onClick={async () => {
+                try {
+                  const qty = quantity || 1;
+                  const res = await api.post('cart/items/', { item_id: item.id, quantity: qty });
+                  window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
+                  alert('Added to cart');
+                } catch {
+                  alert('Please log in to add to cart');
+                }
+              }}
             >
               Add to cart
             </button>

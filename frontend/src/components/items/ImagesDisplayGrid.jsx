@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useState } from "react";
-import { DEFAULT_IMAGE } from "../constants";
+import { DEFAULT_IMAGE } from "../../constants";
 
 const ImagesDisplayGrid = ({ images }) => {
   const [selectedIdx, setSelectedIdx] = useState(0);

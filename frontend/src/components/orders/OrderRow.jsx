@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
-const OrderRow = ({orders}) => {
-    
+const OrderRow = ({ orders: _orders }) => {
+  void _orders;
+  return null;
 };
 
 OrderRow.propTypes = {
