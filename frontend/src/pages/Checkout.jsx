@@ -42,7 +42,7 @@ const Checkout = () => {
 
     try {
       const res = await api.post('checkout/', form);
-      window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: 0 } }));
+      globalThis.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: 0 } }));
       navigate(`/orders/${res.data.id}`);
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Checkout failed';

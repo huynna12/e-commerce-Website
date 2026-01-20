@@ -36,9 +36,7 @@ const Profile = () => {
     return d.toLocaleDateString();
   };
 
-  const purchasedItems = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
-
+  const aggregatePurchasedItems = (orders) => {
     const map = new Map();
     for (const order of orders) {
       const createdAt = order?.created_at ? new Date(order.created_at) : null;
@@ -70,6 +68,11 @@ const Profile = () => {
       const bd = b.last_purchased_at ? b.last_purchased_at.getTime() : 0;
       return bd - ad;
     });
+  };
+
+  const purchasedItems = useMemo(() => {
+    if (!orders || orders.length === 0) return [];
+    return aggregatePurchasedItems(orders);
   }, [orders]);
 
   useEffect(() => {

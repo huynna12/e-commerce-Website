@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 
 const CATEGORY_OPTIONS = [
 	{ value: "", label: "Select category" },
@@ -38,8 +39,8 @@ const buildFormData = (data, images, imageUrls) => {
 		formData.append("images", image);
 	}
 
-	imageUrls.forEach((url) => {
-		const trimmed = String(url || "").trim();
+	imageUrls.forEach(({ value }) => {
+		const trimmed = String(value || "").trim();
 		if (trimmed) formData.append("image_urls", trimmed);
 	});
 
@@ -57,6 +58,11 @@ const formatApiErrors = (err) => {
 		.join("\n");
 };
 
+const makeId = () => {
+	if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+	return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 const ItemForm = ({
 	initialData,
 	title = "Item",
@@ -65,7 +71,7 @@ const ItemForm = ({
 }) => {
 	const [data, setData] = useState(initialData);
 	const [images, setImages] = useState([]);
-	const [imageUrls, setImageUrls] = useState([""]);
+	const [imageUrls, setImageUrls] = useState([{ id: makeId(), value: "" }]);
 	const [errorMsg, setErrorMsg] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -120,13 +126,11 @@ const ItemForm = ({
 	};
 
 	const handleImageUrlChange = (idx, value) => {
-		const next = [...imageUrls];
-		next[idx] = value;
-		setImageUrls(next);
+		setImageUrls((prev) => prev.map((entry, i) => (i === idx ? { ...entry, value } : entry)));
 	};
 
-	const addImageUrlField = () => setImageUrls([...imageUrls, ""]);
-	const removeImageUrlField = (idx) => setImageUrls(imageUrls.filter((_, i) => i !== idx));
+	const addImageUrlField = () => setImageUrls((prev) => [...prev, { id: makeId(), value: "" }]);
+	const removeImageUrlField = (idx) => setImageUrls((prev) => prev.filter((_, i) => i !== idx));
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -194,14 +198,14 @@ const ItemForm = ({
 				)}
 
 				<label className="label" htmlFor="image_url_0">Image URLs</label>
-				{imageUrls.map((url, idx) => (
-					<div key={idx} className="flex mb-2 items-center">
+				{imageUrls.map((entry, idx) => (
+					<div key={entry.id} className="flex mb-2 items-center">
 						<input
 							type="text"
 							id={`image_url_${idx}`}
 							className="form-input flex-1"
 							placeholder="Image URL"
-							value={url}
+							value={entry.value}
 							onChange={(e) => handleImageUrlChange(idx, e.target.value)}
 							autoComplete="url"
 						/>
@@ -450,6 +454,13 @@ const ItemForm = ({
 			</form>
 		</div>
 	);
+};
+
+ItemForm.propTypes = {
+	initialData: PropTypes.object.isRequired,
+	title: PropTypes.string,
+	submitLabel: PropTypes.string,
+	onSubmit: PropTypes.func.isRequired,
 };
 
 export default ItemForm;
