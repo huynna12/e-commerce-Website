@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from decimal import Decimal
 
 '''
 CONTENTS: 
@@ -57,9 +58,9 @@ class Order(models.Model):
         def apply_item_promos(order_item, promos):
             price = order_item.price
 
-            for promo in item_and_seller_promos:
+            for promo in promos:
                 if promo.is_applicable_to_item(order_item):
-                    price = promo.calculate_discount_amount(price)
+                    price = promo.calculate_discounted_amount(price)
             return price
 
         # Method starts here !! 
@@ -76,7 +77,7 @@ class Order(models.Model):
         # Apply checkout promos to the subtotal
         for promo in checkout_promos:
             if promo.is_valid():
-                subtotal = promo.calculate_discount_amount(subtotal)
+                subtotal = promo.calculate_discounted_amount(subtotal)
 
         return subtotal
 
@@ -98,3 +99,37 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"x{self.quantity} {self.item.item_name} in Order #{self.order.id}"
+
+
+class Cart(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Cart for {self.user.username}"
+
+    @property
+    def total_quantity(self):
+        return sum(ci.quantity for ci in self.items.all())
+
+    @property
+    def total_price(self):
+        total = Decimal('0.00')
+        for ci in self.items.select_related('item').all():
+            total += Decimal(str(ci.item.current_price)) * ci.quantity
+        return total
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey('items.Item', on_delete=models.CASCADE, related_name='cart_items')
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('cart', 'item')
+
+    def __str__(self):
+        return f"x{self.quantity} {self.item.item_name} in {self.cart}"

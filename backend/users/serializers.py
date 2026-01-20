@@ -25,36 +25,48 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
-# Base class for profile 
-class BuyerSerializer(serializers.ModelSerializer):
+# Public profile (safe for unauthenticated users)
+class PublicProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    buyer_orders = serializers.SerializerMethodField()
-    
-    class Meta: 
+
+    class Meta:
         model = Profile
         fields = [
-            'username', 'image', 'bio', 'created_at', 'phone_number', 
-            'address', 'city', 'postal_code', 'total_sales', 'is_seller',
+            'username', 'image', 'bio', 'created_at',
+            'is_seller', 'seller_rating', 'total_sales',
+        ]
+
+
+# Private profile (only for the profile owner)
+class PrivateProfileSerializer(PublicProfileSerializer):
+    buyer_orders = serializers.SerializerMethodField()
+
+    class Meta(PublicProfileSerializer.Meta):
+        fields = PublicProfileSerializer.Meta.fields + [
+            'phone_number',
+            'address', 'city', 'postal_code', 'country',
+            'marketing_emails',
             'buyer_orders',
         ]
-    
+
     def get_buyer_orders(self, obj):
-        # All orders placed by this user as a buyer
         return [order.id for order in obj.user.orders.all()]
 
-class SellerSerializer(BuyerSerializer):
+
+class PrivateSellerProfileSerializer(PrivateProfileSerializer):
     seller_orders = serializers.SerializerMethodField()
 
-    class Meta(BuyerSerializer.Meta):
-        fields = BuyerSerializer.Meta.fields + [
-            'seller_rating', 'total_sales', 'marketing_emails', 'seller_orders'
-        ]
+    class Meta(PrivateProfileSerializer.Meta):
+        fields = PrivateProfileSerializer.Meta.fields + ['seller_orders']
 
     def get_seller_orders(self, obj):
-        # All orders where this user is the seller
-        # Find all OrderItems where item.seller == obj.user, then get their orders
         from orders.models import OrderItem
-        order_ids = OrderItem.objects.filter(item__seller=obj.user).values_list('order_id', flat=True).distinct()
+        order_ids = (
+            OrderItem.objects
+            .filter(item__seller=obj.user)
+            .values_list('order_id', flat=True)
+            .distinct()
+        )
         return list(order_ids)
 
 class ProfileCreateUpdate(serializers.ModelSerializer):
