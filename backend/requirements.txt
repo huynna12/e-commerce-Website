@@ -1,13 +1,10 @@
-asgiref
-djangorestframework
 django
+djangorestframework
 django-cors-headers
 djangorestframework-simplejwt
-PyJWT
-pytz
-sqlparse
-psycopg2-binary
 python-dotenv
 django-seed
 Pillow
 drf-spectacular
+psycopg2-binary
+dj-database-url
