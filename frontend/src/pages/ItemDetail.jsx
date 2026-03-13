@@ -92,7 +92,7 @@ const ItemDetail = () => {
                 try {
                   const qty = quantity || 1;
                   const res = await api.post('cart/items/', { item_id: item.id, quantity: qty });
-                  window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
+                  globalThis.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
                   alert('Added to cart');
                 } catch {
                   alert('Please log in to add to cart');

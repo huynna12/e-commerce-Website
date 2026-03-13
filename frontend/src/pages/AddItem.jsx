@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import ItemForm from "../components/forms/ItemForm";
+import Navbar from "../components/layout/Navbar";
 
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
@@ -40,12 +41,15 @@ const AddItem = () => {
   }, [navigate]);
 
   return (
-    <ItemForm
-      initialData={initialData}
-      title="Add item"
-      submitLabel="Add Item"
-      onSubmit={handleSubmit}
-    />
+    <>
+      <Navbar />
+      <ItemForm
+        initialData={initialData}
+        title="Add item"
+        submitLabel="Add Item"
+        onSubmit={handleSubmit}
+      />
+    </>
   );
 };
 

@@ -5,6 +5,7 @@ import ErrorState from '../components/ErrorState';
 import LoadingIndicator from '../components/ui/LoadingIndicator';
 import { backendOrigin } from '../constants';
 import ItemRow from '../components/items/ItemRow';
+import Navbar from '../components/layout/Navbar.jsx'
 
 const Profile = () => {
   const { username } = useParams();
@@ -12,6 +13,7 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [sellerItems, setSellerItems] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [sellerOrders, setSellerOrders] = useState([]);
   const [isOwnerFromApi, setIsOwnerFromApi] = useState(false);
 
   const viewerUsername = localStorage.getItem('username');
@@ -114,139 +116,198 @@ const Profile = () => {
       .catch(() => setOrders([]));
   }, [isOwnProfile]);
 
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    if (!profile?.is_seller && (!sellerItems || sellerItems.length === 0)) return;
+    api
+      .get('seller/orders/')
+      .then((res) => setSellerOrders(res.data))
+      .catch(() => setSellerOrders([]));
+  }, [isOwnProfile, profile?.is_seller, sellerItems]);
+
+
   if (error) return <ErrorState title="Profile error" message={error} />;
   if (!profile) return <LoadingIndicator />;
 
   return (
-    <main className="screen-max-width px-8 py-24">
-      <div className="grid grid-cols-5 gap-10">
-        <section className="col-span-2">
-          <div className="form-container">
-            {profile.image && (
-              <img
-                src={resolveMediaUrl(profile.image)}
-                alt={`${profile.username}'s avatar`}
-                className="w-32 h-32 rounded-full mb-4 border-2 border-black object-cover mx-auto"
+    <>
+      <Navbar/>
+      <main className="screen-max-width px-8 py-24">
+        <div className="grid grid-cols-5 gap-10">
+          <section className="col-span-2">
+            <div className="form-container">
+              {profile.image && (
+                <img
+                  src={resolveMediaUrl(profile.image)}
+                  alt={`${profile.username}'s avatar`}
+                  className="w-32 h-32 rounded-full mb-4 border-2 border-black object-cover mx-auto"
+                />
+              )}
+
+              <div className="form-heading text-3xl font-bold text-center mb-2">
+                {profile.username}
+              </div>
+
+              <div className="text-center text-gray-600 mb-4">
+                Joined: {fmtDate(profile.created_at) || '—'}
+              </div>
+
+              {profile.bio && (
+                <p className="text-gray-700 text-center mb-4">
+                  <span className="font-semibold">Bio:</span> {profile.bio}
+                </p>
+              )}
+
+              {profile.is_seller && (
+                <div className="mt-6">
+                  <div className="font-semibold text-lg mb-2">Seller stats</div>
+                  <div className="text-gray-700">Rating: {profile.seller_rating ?? 0}</div>
+                  <div className="text-gray-700">Total sales: {profile.total_sales ?? 0}</div>
+                </div>
+              )}
+
+              {isOwnProfile && (
+                <div className="mt-6 flex justify-center">
+                  <Link
+                    to={`/profile/${username}/edit`}
+                    className="form-btn text-center"
+                    style={{ width: 'fit-content' }}
+                  >
+                    Edit profile
+                  </Link>
+                </div>
+              )}
+
+              {isOwnProfile && (
+                <div className="mt-6">
+                  <div className="font-semibold text-lg mb-2">Private info</div>
+                  <div className="text-gray-700">Phone: {profile.phone_number || '—'}</div>
+                  <div className="text-gray-700">Address: {profile.address || '—'}</div>
+                  <div className="text-gray-700">City: {profile.city || '—'}</div>
+                  <div className="text-gray-700">Postal: {profile.postal_code || '—'}</div>
+                  <div className="text-gray-700">Country: {profile.country || '—'}</div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="col-span-3">
+            {(isOwnProfile || profile.is_seller) && (
+              <ItemRow
+                title={isOwnProfile ? 'My items' : 'Items for sale'}
+                itemList={sellerItems}
+                showEdit={Boolean(isOwnProfile)}
               />
             )}
 
-            <div className="form-heading text-3xl font-bold text-center mb-2">
-              {profile.username}
-            </div>
-
-            <div className="text-center text-gray-600 mb-4">
-              Joined: {fmtDate(profile.created_at) || '—'}
-            </div>
-
-            {profile.bio && (
-              <p className="text-gray-700 text-center mb-4">
-                <span className="font-semibold">Bio:</span> {profile.bio}
-              </p>
-            )}
-
-            {profile.is_seller && (
-              <div className="mt-6">
-                <div className="font-semibold text-lg mb-2">Seller stats</div>
-                <div className="text-gray-700">Rating: {profile.seller_rating ?? 0}</div>
-                <div className="text-gray-700">Total sales: {profile.total_sales ?? 0}</div>
-              </div>
-            )}
-
             {isOwnProfile && (
-              <div className="mt-6 flex justify-center">
-                <Link
-                  to={`/profile/${username}/edit`}
-                  className="form-btn text-center"
-                  style={{ width: 'fit-content' }}
-                >
-                  Edit profile
-                </Link>
-              </div>
-            )}
+              <div className="py-8">
+                <h1 className="text-4xl mb-4 font-semibold">Orders placed</h1>
 
-            {isOwnProfile && (
-              <div className="mt-6">
-                <div className="font-semibold text-lg mb-2">Private info</div>
-                <div className="text-gray-700">Phone: {profile.phone_number || '—'}</div>
-                <div className="text-gray-700">Address: {profile.address || '—'}</div>
-                <div className="text-gray-700">City: {profile.city || '—'}</div>
-                <div className="text-gray-700">Postal: {profile.postal_code || '—'}</div>
-                <div className="text-gray-700">Country: {profile.country || '—'}</div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="col-span-3">
-          {(isOwnProfile || profile.is_seller) && (
-            <ItemRow
-              title={isOwnProfile ? 'My items' : 'Items for sale'}
-              itemList={sellerItems}
-              showEdit={Boolean(isOwnProfile)}
-            />
-          )}
-
-          {isOwnProfile && (
-            <div className="py-8">
-              <h1 className="text-4xl mb-4 font-semibold">Orders placed</h1>
-
-              {orders && orders.length > 0 ? (
-                <div className="space-y-4">
-                  {orders.map((o) => (
-                    <div key={o.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <div className="flex justify-between items-center">
-                        <Link to={`/orders/${o.id}`} className="font-semibold hover:underline">
-                          Order #{o.id}
-                        </Link>
-                        <div className="text-gray-600">{fmtDate(o.created_at) || '—'}</div>
-                      </div>
-                      <div className="mt-1 text-gray-700">Status: {o.status}</div>
-                      <div className="text-gray-700">Total: ${o.total_price}</div>
-
-                      {o.items && o.items.length > 0 && (
-                        <ul className="mt-3 list-disc pl-6 text-gray-700">
-                          {o.items.slice(0, 5).map((it) => (
-                            <li key={`${o.id}-${it.item_id}`}>x{it.quantity} {it.item_name}</li>
-                          ))}
-                          {o.items.length > 5 && (
-                            <li>…and {o.items.length - 5} more</li>
-                          )}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-[#daaa56] italic">No orders to display</div>
-              )}
-
-              <div className="mt-10">
-                <h2 className="text-3xl mb-4 font-semibold">Items purchased</h2>
-                {purchasedItems.length > 0 ? (
-                  <div className="space-y-2">
-                    {purchasedItems.map((it) => (
-                      <div key={it.item_id} className="flex justify-between items-center bg-white border border-gray-200 rounded-xl p-3">
-                        <div>
-                          <Link to={`/items/${it.item_id}`} className="font-semibold hover:underline">
-                            {it.item_name}
-                          </Link>
-                          <div className="text-sm text-gray-600">
-                            Last purchased: {it.last_purchased_at ? it.last_purchased_at.toLocaleDateString() : '—'}
-                          </div>
+                {orders && orders.length > 0 ? (
+                  <div className="space-y-4">
+                    {orders.map((o) => (
+                      <Link
+                        key={o.id}
+                        to={`/orders/${o.id}`}
+                        className="block bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="font-semibold">Order #{o.id}</div>
+                          <div className="text-gray-600">{fmtDate(o.created_at) || '—'}</div>
                         </div>
-                        <div className="text-gray-700">Qty: {it.total_quantity}</div>
-                      </div>
+                        <div className="mt-1 text-gray-700">Status: {o.status}</div>
+                        <div className="text-gray-700">Total: ${o.total_price}</div>
+
+                        {o.items && o.items.length > 0 && (
+                          <ul className="mt-3 list-disc pl-6 text-gray-700">
+                            {o.items.slice(0, 5).map((it) => (
+                              <li key={`${o.id}-${it.item_id}`}>x{it.quantity} {it.item_name}</li>
+                            ))}
+                            {o.items.length > 5 && (
+                              <li>…and {o.items.length - 5} more</li>
+                            )}
+                          </ul>
+                        )}
+                      </Link>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[#daaa56] italic">No purchased items to display</div>
+                  <div className="text-[#daaa56] italic">No orders to display</div>
+                )}
+
+                <div className="mt-10">
+                  <h2 className="text-3xl mb-4 font-semibold">Items purchased</h2>
+                  {purchasedItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {purchasedItems.map((it) => (
+                        <div key={it.item_id} className="flex justify-between items-center bg-white border border-gray-200 rounded-xl p-3">
+                          <div>
+                            <Link to={`/items/${it.item_id}`} className="font-semibold hover:underline">
+                              {it.item_name}
+                            </Link>
+                            <div className="text-sm text-gray-600">
+                              Last purchased: {it.last_purchased_at ? it.last_purchased_at.toLocaleDateString() : '—'}
+                            </div>
+                          </div>
+                          <div className="text-gray-700">Qty: {it.total_quantity}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[#daaa56] italic">No purchased items to display</div>
+                  )}
+                </div>
+
+                {(profile.is_seller || (sellerItems && sellerItems.length > 0)) && (
+                  <div className="mt-12">
+                    <h2 className="text-3xl mb-4 font-semibold">Orders for my items</h2>
+
+                    {sellerOrders && sellerOrders.length > 0 ? (
+                      <div className="space-y-4">
+                        {sellerOrders.map((o) => (
+                          <Link
+                            key={o.id}
+                            to={`/seller/orders/${o.id}`}
+                            className="block bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="font-semibold">Order #{o.id}</div>
+                              <div className="text-gray-600">{fmtDate(o.created_at) || '—'}</div>
+                            </div>
+                            <div className="mt-1 text-gray-700">Buyer: {o.buyer_username}</div>
+                            <div className="text-gray-700">Status: {o.status}</div>
+                            <div className="text-gray-700 text-sm">
+                              Ship to: {o.shipping_city || '—'}, {o.shipping_country || '—'}
+                            </div>
+
+                            {o.items && o.items.length > 0 && (
+                              <ul className="mt-3 list-disc pl-6 text-gray-700">
+                                {o.items.map((it) => (
+                                  <li key={`${o.id}-${it.item_id}`}>x{it.quantity} {it.item_name}</li>
+                                ))}
+                              </ul>
+                            )}
+
+                            {Array.isArray(o.item_cancellation_requests) && o.item_cancellation_requests.length > 0 ? (
+                              <div className="mt-3 text-sm text-gray-600">
+                                Pending cancellation requests: {o.item_cancellation_requests.filter((x) => x?.status === 'pending').length}
+                              </div>
+                            ) : null}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[#daaa56] italic">No seller orders to display</div>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+            )}
+          </section>
+        </div>
+      </main>
+    </>
   );
 };
 

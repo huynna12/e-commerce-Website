@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 
 import Register from './pages/Register';
@@ -11,6 +11,7 @@ import ItemDetail from './pages/ItemDetail';
 import AddItem from './pages/AddItem';
 import UpdateItem from './pages/UpdateItem';
 import OrderDetail from './pages/OrderDetail';
+import SellerOrderDetail from './pages/SellerOrderDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 
@@ -46,6 +47,7 @@ function App() {
           <Route path="/profile/:username" element={<Profile />} />
           <Route path="/profile/:username/edit" element={<ProfileEdit />} />
           <Route path="/orders/:orderId" element={<OrderDetail />} />
+          <Route path="/seller/orders/:orderId" element={<SellerOrderDetail />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

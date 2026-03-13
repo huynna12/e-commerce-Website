@@ -40,6 +40,7 @@ class Order(models.Model):
     # Payment information
     payment_method = models.CharField(max_length=50, default='credit_card')
     payment_status = models.CharField(max_length=20, default='paid')
+    refund_pending = models.BooleanField(default=False, help_text='True when a refund should be issued for cancelled items')
     
     # Additional fields
     notes = models.TextField(blank=True, help_text="Special instructions or notes")
@@ -99,6 +100,81 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"x{self.quantity} {self.item.item_name} in Order #{self.order.id}"
+
+
+class OrderCancellation(models.Model):
+    """A per-seller cancellation decision for a given order.
+
+    Orders can contain items from multiple sellers; cancellation is only finalized
+    when every involved seller approves.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('denied', 'Denied'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='cancellation_requests')
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='order_cancellation_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    message = models.TextField(blank=True, help_text='Buyer message/reason for the cancellation request')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='order_cancellation_decisions',
+    )
+
+    class Meta:
+        unique_together = ('order', 'seller')
+        indexes = [
+            models.Index(fields=['seller', 'status']),
+            models.Index(fields=['order', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Cancellation {self.status} for Order #{self.order_id} (seller={self.seller.username})"
+
+
+class OrderItemCancellation(models.Model):
+    """A cancellation request for a specific order item.
+
+    Buyer requests cancellation for one (or more) items in an order. The seller of
+    that item approves/denies. When approved, the order item is removed and stock
+    is restored.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('denied', 'Denied'),
+    ]
+
+    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE, related_name='cancellation_request')
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='order_item_cancellation_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    message = models.TextField(blank=True, help_text='Buyer message/reason for the cancellation request')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='order_item_cancellation_decisions',
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['seller', 'status']),
+        ]
+
+    def __str__(self):
+        return f"ItemCancellation {self.status} for OrderItem #{self.order_item_id} (seller={self.seller.username})"
 
 
 class Cart(models.Model):

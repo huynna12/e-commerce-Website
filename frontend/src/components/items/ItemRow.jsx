@@ -1,8 +1,17 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Rating from '../ui/Rating';
-import { apiUrl, DEFAULT_IMAGE } from '../../constants';
+import { backendOrigin, DEFAULT_IMAGE } from '../../constants';
 import api from '../../api';
+
+const resolveMediaUrl = (value) => {
+  if (!value) return '';
+  const str = String(value);
+  if (str === 'null' || str.trim() === '') return '';
+  if (str.startsWith('http://') || str.startsWith('https://')) return str;
+  if (str.startsWith('/')) return `${backendOrigin}${str}`;
+  return `${backendOrigin}/${str}`;
+};
 
 const ItemRow = ({ title, itemList, showEdit = false }) => {
   return (
@@ -15,7 +24,7 @@ const ItemRow = ({ title, itemList, showEdit = false }) => {
             if (item.item_image?.image_url && item.item_image.image_url !== "null" && item.item_image.image_url !== "") {
               image_src = item.item_image.image_url;
             } else if (item.item_image?.image_file && item.item_image.image_file !== "null" && item.item_image.image_file !== "") {
-              image_src = apiUrl + item.item_image.image_file;
+              image_src = resolveMediaUrl(item.item_image.image_file) || DEFAULT_IMAGE;
             }
             const card = (
               <div className='bg-white rounded-xl shadow hover:shadow-lg transition-shadow p-4 cursor-pointer flex flex-col items-center w-56'>
@@ -35,7 +44,7 @@ const ItemRow = ({ title, itemList, showEdit = false }) => {
                     e.stopPropagation();
                     try {
                       const res = await api.post('cart/items/', { item_id: item.id, quantity: 1 });
-                      window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
+                      globalThis.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
                       alert('Added to cart');
                     } catch {
                       alert('Please log in to add to cart');

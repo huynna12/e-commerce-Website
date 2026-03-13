@@ -5,12 +5,23 @@ import api from '../api';
 import Navbar from '../components/layout/Navbar';
 import LoadingIndicator from '../components/ui/LoadingIndicator';
 import ErrorState from '../components/ErrorState';
-import { apiUrl, DEFAULT_IMAGE } from '../constants';
+import { backendOrigin, DEFAULT_IMAGE } from '../constants';
+
+const resolveMediaUrl = (value) => {
+  if (!value) return '';
+  const str = String(value);
+  if (str === 'null' || str.trim() === '') return '';
+  if (str.startsWith('http://') || str.startsWith('https://')) return str;
+  if (str.startsWith('/')) return `${backendOrigin}${str}`;
+  return `${backendOrigin}/${str}`;
+};
 
 const getImageSrc = (itemImage) => {
   if (!itemImage) return DEFAULT_IMAGE;
   if (itemImage.image_url && itemImage.image_url !== 'null' && itemImage.image_url !== '') return itemImage.image_url;
-  if (itemImage.image_file && itemImage.image_file !== 'null' && itemImage.image_file !== '') return apiUrl + itemImage.image_file;
+  if (itemImage.image_file && itemImage.image_file !== 'null' && itemImage.image_file !== '') {
+    return resolveMediaUrl(itemImage.image_file) || DEFAULT_IMAGE;
+  }
   return DEFAULT_IMAGE;
 };
 
@@ -45,7 +56,7 @@ const Cart = () => {
     try {
       const res = await api.patch(`cart/items/${itemId}/`, { quantity });
       setCart(res.data);
-      window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
+      globalThis.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
     } catch {
       setError('Failed to update quantity');
     } finally {
@@ -58,7 +69,7 @@ const Cart = () => {
     try {
       const res = await api.delete(`cart/items/${itemId}/`);
       setCart(res.data);
-      window.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
+      globalThis.dispatchEvent(new CustomEvent('cart:updated', { detail: { total_quantity: res.data?.total_quantity } }));
     } catch {
       setError('Failed to remove item');
     } finally {
