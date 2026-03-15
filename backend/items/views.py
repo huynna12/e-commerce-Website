@@ -98,6 +98,25 @@ class ItemViewSet(viewsets.ModelViewSet):
         read_serializer = self.get_serializer(item)
         return Response(read_serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Track views for trending + recently viewed/recommendations.
+        try:
+            instance.increment_view_count()
+        except Exception:
+            # Never block product pages due to analytics counters.
+            pass
+
+        try:
+            Item.track_view(instance.id, request, limit=20)
+        except Exception:
+            # Session might not be available in some edge environments.
+            pass
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def get_queryset(self):
         # Special case: user's own items
         seller_param = self.request.query_params.get('seller')

@@ -3,6 +3,8 @@ import { ACCESS_TOKEN, REFRESH_TOKEN, apiUrl } from './constants';
 
 const api = axios.create({
   baseURL: apiUrl,
+  // Needed for Django session cookies (recently viewed) when frontend/backends are on different origins.
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {

@@ -141,6 +141,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 # --- CORS / CSRF ---
 CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "0") == "1"
 
+# Needed if you want browsers to include cookies (Django sessions) on cross-origin requests.
+# For this project, sessions are used for features like "recently viewed" items.
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "0") == "1"
+
 if not CORS_ALLOW_ALL_ORIGINS:
     CORS_ALLOWED_ORIGINS = [
         o.strip()
@@ -165,6 +169,15 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "0") == "1"
 SESSION_COOKIE_SECURE = os.getenv("DJANGO_SESSION_COOKIE_SECURE", "0") == "1"
 CSRF_COOKIE_SECURE = os.getenv("DJANGO_CSRF_COOKIE_SECURE", "0") == "1"
+
+# If your frontend and backend are on different domains/subdomains (e.g., Render static site + Render web service),
+# browsers treat cookies as cross-site and will drop them unless SameSite=None;Secure.
+DJANGO_CROSS_SITE_COOKIES = os.getenv("DJANGO_CROSS_SITE_COOKIES", "0") == "1"
+if DJANGO_CROSS_SITE_COOKIES:
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
