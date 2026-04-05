@@ -26,7 +26,7 @@ npm run dev
 
 - `VITE_API_URL` (required): backend base API URL — default `http://127.0.0.1:8000/api/` works for local dev.
 
-Optional — only needed to upload sourcemaps to Sentry during `npm run build`:
+Optional (only for sourcemap uploads during `npm run build`):
 
 - `SENTRY_AUTH_TOKEN`
 - `SENTRY_ORG`
