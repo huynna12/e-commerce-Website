@@ -9,25 +9,37 @@ A full-stack e-commerce web app built with Django REST Framework and React.
 
 ## Screenshots
 
+### Home & Item Detail
 | Home | Item Detail |
 |------|------------|
-| ![Home](screenshots/HomePage.png) | ![Item Detail](screenshots/item_detail.png) |
+| <img src="screenshots/HomePage.png" width="480"/> | <img src="screenshots/item_detail.png" width="480"/> |
 
+### Auth
 | Login | Register |
 |-------|----------|
-| ![Login](screenshots/login.png) | ![Register](screenshots/Register.png) |
+| <img src="screenshots/login.png" width="480"/> | <img src="screenshots/Register.png" width="480"/> |
 
-| Cart | Checkout | Order |
-|------|----------|-------|
-| ![Cart](screenshots/cart.png) | ![Checkout](screenshots/checkout.png) | ![Order](screenshots/Order.png) |
+### Shopping Flow
+| Cart | Checkout |
+|------|----------|
+| <img src="screenshots/cart.png" width="480"/> | <img src="screenshots/checkout.png" width="480"/> |
 
+| Order | |
+|-------|---|
+| <img src="screenshots/Order.png" width="480"/> | |
+
+### Seller Flow
 | Add Item | Add Item (cont.) |
 |----------|-----------------|
-| ![Add Item](screenshots/add_item.png) | ![Add Item 2](screenshots/add_item2.png) |
+| <img src="screenshots/add_item.png" width="480"/> | <img src="screenshots/add_item2.png" width="480"/> |
 
-| Seller Profile | Seller View of Order | Seller Accept Cancellation |
-|----------------|----------------------|---------------------------|
-| ![Seller Profile](screenshots/Seller_profile.png) | ![Seller View of Order](screenshots/seller_view_of_order.png) | ![Seller Accept Cancellation](screenshots/seller_accept_cancellation.png) |
+| Seller Profile | Seller View of Order |
+|----------------|----------------------|
+| <img src="screenshots/Seller_profile.png" width="480"/> | <img src="screenshots/seller_view_of_order.png" width="480"/> |
+
+| Seller Accept Cancellation | |
+|---------------------------|---|
+| <img src="screenshots/seller_accept_cancellation.png" width="480"/> | |
 
 ---
 
