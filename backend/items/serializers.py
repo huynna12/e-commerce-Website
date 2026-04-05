@@ -29,10 +29,21 @@ class ReviewSerializer(serializers.ModelSerializer):
         return False
 
 class ReviewCreateUpdateSerializer(serializers.ModelSerializer):
-    order_id = serializers.IntegerField(required=False, allow_null=True)
+    item_id = serializers.IntegerField(write_only=True, required=False)
+    order_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     class Meta:
         model = Review
-        fields = ['rating', 'content', 'order_id', 'media']
+        fields = ['item_id', 'rating', 'content', 'order_id', 'media']
+
+    def create(self, validated_data):
+        validated_data.pop('item_id', None)
+        validated_data.pop('order_id', None)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data.pop('item_id', None)
+        validated_data.pop('order_id', None)
+        return super().update(instance, validated_data)
 
 class ItemImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -81,8 +92,9 @@ class ItemDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'item_name', 'item_summary', 'item_desc', 'item_price', 
             'current_price', 'item_quantity', 'item_images',
-            'display_category', 'custom_category',
+            'item_category', 'display_category', 'custom_category',
             'item_sku', 'item_origin', 'display_condition',
+            'item_condition',
             'is_available', 'is_on_sale', 'is_digital', 'is_in_stock',
             'sale_price', 'sale_start_date', 'sale_end_date', 'is_sale_active',
             'discount_percentage',
@@ -106,27 +118,12 @@ class ItemCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = [
-            'item_name', 'item_summary', 'item_desc', 'item_price', 'item_quantity', 'item_category', 
-            'custom_category', 'item_origin', 'item_condition', 'is_available', 'is_on_sale', 
+            'item_name', 'item_summary', 'item_desc', 'item_price', 'item_quantity', 'item_category',
+            'custom_category', 'item_origin', 'item_condition', 'is_available', 'is_on_sale',
             'is_digital', 'sale_price', 'sale_start_date', 'sale_end_date', 'item_sku', 'seller', 'id'
         ]
 
-    def create(self, validated_data):
-        images_data = validated_data.pop('images', None)
-        item = Item.objects.create(**validated_data)
-        self._set_images(item, images_data)
-        return item
-
-    def update(self, instance, validated_data):
-        images_data = validated_data.pop('images', None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        self._set_images(instance, images_data)
-        return instance
-
     def _set_images(self, item, images_data):
-        # Remove all images for this item
         item.item_images.all().delete()
 
         if images_data:

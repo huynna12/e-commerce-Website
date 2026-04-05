@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+env/
+.env/
+.venv/
+venv/
+
+# Django
+*.log
+db.sqlite3
+backend/media/
+
+# Environment variables
+.env
+*.env
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Build artifacts
+frontend/dist/

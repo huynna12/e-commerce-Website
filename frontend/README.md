@@ -1,12 +1,40 @@
-# React + Vite
+# H-Commerce Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the H-Commerce project.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 18+
 
-## Expanding the ESLint configuration
+## Local setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**macOS / Linux**
+```bash
+cp .env.example .env
+npm install
+npm run dev
+```
+
+**Windows (PowerShell)**
+```powershell
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+## Environment variables
+
+- `VITE_API_URL` (required): backend base API URL — default `http://127.0.0.1:8000/api/` works for local dev.
+
+Optional — only needed to upload sourcemaps to Sentry during `npm run build`:
+
+- `SENTRY_AUTH_TOKEN`
+- `SENTRY_ORG`
+- `SENTRY_PROJECT`
+
+## Scripts
+
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm run preview` — preview build locally
+- `npm run lint` — run ESLint

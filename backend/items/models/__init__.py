@@ -1,5 +1,8 @@
-from .item import Item
-from .review import Review
-from .promotion import Promotion
+if __name__ == 'items.models':
+	from .item import Item
+	from .review import Review
+	from .promotion import Promotion
 
-__all__ = ['Item', 'Review', 'Promotion']
+	__all__ = ['Item', 'Review', 'Promotion']
+else:
+	__all__ = []
